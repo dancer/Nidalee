@@ -4,16 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/icons/icon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" as="style">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Righteous&display=swap">
     <title>Nidalee</title>
     <style>
-      /* Prevent context menu */
+      @import url('https://fonts.googleapis.com/css2?family=Righteous&display=swap');
+      
       body {
         -webkit-user-select: none;
         -webkit-app-region: drag;
         user-select: none;
+        margin: 0;
+        overflow: hidden;
+        background-color: #141414;
       }
 
-      /* Allow interaction with inputs and buttons */
       input, button, select, a, [role="button"] {
         -webkit-app-region: no-drag;
       }
@@ -30,40 +35,118 @@
         justify-content: center;
         align-items: center;
         z-index: 9999;
-        font-family: 'Courier New', monospace;
+        visibility: hidden;
       }
 
-      #loading-content {
-        color: #ff4f4f;
+      #loading-screen.visible {
+        visibility: visible;
+      }
+
+      .logo-container {
+        position: relative;
         text-align: center;
+        perspective: 1000px;
       }
 
-      .ascii-art {
+      .logo-wrapper {
+        position: relative;
+        transform-style: preserve-3d;
+      }
+
+      .logo {
+        font-family: 'Righteous', cursive;
+        font-size: 64px;
+        color: #ff4f4f;
+        margin: 0;
+        padding: 0;
+        line-height: 1;
+        opacity: 0;
+        animation: none;
+        transform-origin: center;
+      }
+
+      .reflection-container {
+        position: relative;
+        margin-top: -10px;
+        transform: rotateX(180deg);
+      }
+
+      .logo-reflection {
+        font-family: 'Righteous', cursive;
+        font-size: 64px;
+        margin: 0;
+        padding: 0;
+        line-height: 1;
+        background: -webkit-linear-gradient(#ff4f4f 0%, transparent 80%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        opacity: 0;
+        animation: none;
+        filter: blur(1px);
+      }
+
+      .version {
+        position: absolute;
+        top: 20px;
+        left: 20px;
         font-size: 12px;
-        white-space: pre;
-        line-height: 1.2;
-        margin-bottom: 20px;
-        color: #ff4f4f;
+        color: rgba(255, 79, 79, 0.5);
+        font-family: monospace;
       }
 
-      .loading-text {
-        font-size: 18px;
-        margin-top: 20px;
-        overflow: hidden;
-        white-space: nowrap;
-        border-right: 2px solid #ff4f4f;
-        animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
-        color: #ff4f4f;
+      .year {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        font-size: 12px;
+        color: rgba(255, 79, 79, 0.5);
+        font-family: monospace;
       }
 
-      @keyframes typing {
-        from { width: 0 }
-        to { width: 100% }
+      .loading-dots {
+        margin-top: 40px;
+        display: flex;
+        gap: 8px;
+        justify-content: center;
       }
 
-      @keyframes blink-caret {
-        from, to { border-color: transparent }
-        50% { border-color: #ff4f4f }
+      .dot {
+        width: 8px;
+        height: 8px;
+        background-color: #ff4f4f;
+        border-radius: 50%;
+        opacity: 0.2;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInReflection {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 0.3;
+        }
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 0.2;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.8;
+          transform: scale(1.2);
+        }
       }
 
       #root {
@@ -73,35 +156,84 @@
       #root.loaded {
         display: block;
       }
+
+      .animate-in .logo {
+        animation: fadeIn 1s ease-out forwards;
+      }
+
+      .animate-in .logo-reflection {
+        animation: fadeInReflection 1s ease-out forwards;
+      }
+
+      .animate-in .dot {
+        animation: pulse 1s ease-in-out infinite;
+      }
+
+      .animate-in .dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .animate-in .dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
     </style>
   </head>
   <body oncontextmenu="return false;">
     <div id="loading-screen">
-      <div id="loading-content">
-        <div class="ascii-art">
-          ███╗   ██╗██╗██████╗  █████╗ ██╗     ███████╗███████╗
-          ████╗  ██║██║██╔══██╗██╔══██╗██║     ██╔════╝██╔════╝
-          ██╔██╗ ██║██║██║  ██║███████║██║     █████╗  █████╗  
-          ██║╚██╗██║██║██║  ██║██╔══██║██║     ██╔══╝  ██╔══╝  
-          ██║ ╚████║██║██████╔╝██║  ██║███████╗███████╗███████╗
-          ╚═╝  ╚═══╝╚═╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
+      <div class="version">v0.1.0</div>
+      <div class="year">2024</div>
+      <div class="logo-container">
+        <div class="logo-wrapper">
+          <h1 class="logo">nidalee.</h1>
+          <div class="reflection-container">
+            <h1 class="logo-reflection">nidalee.</h1>
+          </div>
         </div>
-        <div class="loading-text">INITIALIZING SYSTEM...</div>
+      </div>
+      <div class="loading-dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
       </div>
     </div>
     <div id="root"></div>
     <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-          const loadingScreen = document.getElementById('loading-screen');
-          const root = document.getElementById('root');
-          loadingScreen.style.opacity = '0';
-          loadingScreen.style.transition = 'opacity 0.5s ease-out';
-          root.classList.add('loaded');
+      function loadFont() {
+        return new Promise((resolve, reject) => {
+          const font = new FontFace('Righteous', 'url(https://fonts.gstatic.com/s/righteous/v14/1cXxaUPXBpj2rGoU7C9WiHGF.woff2)');
+          
+          font.load().then(() => {
+            document.fonts.add(font);
+            resolve();
+          }).catch(reject);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const loadingScreen = document.getElementById('loading-screen');
+        const root = document.getElementById('root');
+
+        try {
+          await loadFont();
+          
+          loadingScreen.classList.add('visible');
+          requestAnimationFrame(() => {
+            loadingScreen.classList.add('animate-in');
+          });
+
           setTimeout(() => {
-            loadingScreen.style.display = 'none';
-          }, 500);
-        }, 2000);
+            loadingScreen.style.opacity = '0';
+            loadingScreen.style.transition = 'opacity 0.5s ease-out';
+            root.classList.add('loaded');
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+            }, 500);
+          }, 2000);
+        } catch (error) {
+          console.error('Font loading failed:', error);
+          loadingScreen.style.fontFamily = 'system-ui, sans-serif';
+          loadingScreen.classList.add('visible', 'animate-in');
+        }
       });
     </script>
     <script type="module" src="/src/main.tsx"></script>

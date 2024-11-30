@@ -122,6 +122,10 @@ async fn save_settings(
 ) -> Result<(), String> {
     println!("Saving settings: {:?}", settings);
     
+    if let Err(e) = set_auto_startup(settings.startWithWindows) {
+        println!("Failed to set auto startup: {}", e);
+    }
+    
     let mut current_settings = state.settings.lock().unwrap();
     *current_settings = settings;
     
@@ -306,25 +310,32 @@ fn verify_riot_client_path(path: &str) -> bool {
     }
 }
 
-fn set_auto_startup(enable: bool) -> Result<(), String> {
+fn verify_and_update_startup_path() -> Result<(), String> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
-    let (key, _) = hkcu.create_subkey(path).map_err(|e| e.to_string())?;
     
-    let exe_path = env::current_exe().map_err(|e| e.to_string())?;
-    let exe_path_str = exe_path.to_str().ok_or("Invalid path")?;
-
-    if enable {
-        key.set_value("Nidalee", &exe_path_str).map_err(|e| e.to_string())?;
-    } else {
-        key.delete_value("Nidalee").map_err(|e| e.to_string())?;
+    if let Ok((key, _)) = hkcu.create_subkey(path) {
+        if let Ok(current_value) = key.get_value::<String, _>("Nidalee") {
+            if let Ok(exe_path) = env::current_exe() {
+                if let Ok(canonical_path) = exe_path.canonicalize() {
+                    if let Some(exe_path_str) = canonical_path.to_str() {
+                        let expected_value = format!("\"{}\" --start-minimized", exe_path_str);
+                        
+                        if current_value != expected_value {
+                            println!("Updating startup path from: {} to: {}", current_value, expected_value);
+                            let _ = key.set_value("Nidalee", &expected_value);
+                        }
+                    }
+                }
+            }
+        }
     }
-
     Ok(())
 }
 
 #[tauri::command]
 async fn toggle_auto_start(enable: bool) -> Result<(), String> {
+    println!("toggle_auto_start called with enable={}", enable);
     set_auto_startup(enable)
 }
 
@@ -334,6 +345,66 @@ async fn get_auto_start_status() -> Result<bool, String> {
         .open_subkey(r"Software\Microsoft\Windows\CurrentVersion\Run")
         .and_then(|key| key.get_value::<String, _>("Nidalee"))
         .is_ok())
+}
+
+fn set_auto_startup(enable: bool) -> Result<(), String> {
+    println!("=== Auto Startup Debug ===");
+    println!("Setting auto startup: {}", enable);
+    
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
+    println!("Registry path: {}", path);
+    
+    let (key, _) = hkcu.create_subkey(path).map_err(|e| {
+        println!("Failed to create/open registry key: {}", e);
+        e.to_string()
+    })?;
+
+    if enable {
+        let exe_path = match env::current_exe() {
+            Ok(path) => path,
+            Err(e) => {
+                println!("Failed to get executable path: {}", e);
+                return Err(e.to_string());
+            }
+        };
+        println!("Found executable path: {:?}", exe_path);
+
+        let canonical_path = match exe_path.canonicalize() {
+            Ok(path) => path,
+            Err(e) => {
+                println!("Failed to canonicalize path: {}", e);
+                return Err(e.to_string());
+            }
+        };
+        println!("Canonical path: {:?}", canonical_path);
+        
+        if let Some(exe_path_str) = canonical_path.to_str() {
+            let registry_value = format!("\"{}\" --start-minimized", exe_path_str);
+            println!("Setting registry value to: {}", registry_value);
+            
+            match key.set_value("Nidalee", &registry_value) {
+                Ok(_) => println!("Successfully set registry value"),
+                Err(e) => {
+                    println!("Failed to set registry value: {}", e);
+                    return Err(e.to_string());
+                }
+            }
+        } else {
+            println!("Failed to convert path to string");
+            return Err("Invalid path encoding".to_string());
+        }
+    } else {
+        println!("Removing registry value");
+        if let Err(e) = key.delete_value("Nidalee") {
+            println!("Failed to remove registry value: {}", e);
+            return Err(e.to_string());
+        }
+        println!("Successfully removed registry value");
+    }
+
+    println!("=== End Auto Startup Debug ===");
+    Ok(())
 }
 
 fn get_app_data_dir() -> Result<PathBuf, String> {
@@ -380,6 +451,31 @@ async fn check_first_run() -> Result<bool, String> {
     } else {
         Ok(false)
     }
+}
+
+fn verify_startup_path() -> Result<(), String> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
+    
+    if let Ok((key, _)) = hkcu.create_subkey(path) {
+        if let Ok(current_path) = key.get_value::<String, _>("Nidalee") {
+            if let Ok(exe_path) = env::current_exe() {
+                if let Ok(canonical_path) = exe_path.canonicalize() {
+                    if let Some(exe_path_str) = canonical_path.to_str() {
+                        let expected_value = format!("\"{}\" --start-minimized", exe_path_str);
+                        
+                        if current_path != expected_value {
+                            println!("Updating startup path from: {} to: {}", current_path, expected_value);
+                            if let Err(e) = key.set_value("Nidalee", &expected_value) {
+                                println!("Failed to update startup path: {}", e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn main() {
@@ -431,7 +527,9 @@ fn main() {
         .add_item(show)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(quit);
-    let system_tray = SystemTray::new().with_menu(tray_menu);
+    let system_tray = SystemTray::new()
+        .with_menu(tray_menu)
+        .with_tooltip("Nidalee");
 
     tauri::Builder::default()
         .system_tray(system_tray)
@@ -473,33 +571,44 @@ fn main() {
             check_first_run
         ])
         .setup(|app| {
+            if let Err(e) = verify_startup_path() {
+                println!("Failed to verify startup path: {}", e);
+            }
+            
             let window = app.get_window("main").unwrap();
             let state = app.state::<AppState>();
             let settings = state.settings.lock().unwrap();
             
-            let target_monitor = if let Some((x, y)) = settings.window_pos {
-                let monitors = window.available_monitors().unwrap();
-                monitors.into_iter().find(|monitor| {
-                    let position = monitor.position();
-                    let size = monitor.size();
-                    x >= position.x && x < position.x + size.width as i32 &&
-                    y >= position.y && y < position.y + size.height as i32
-                }).or_else(|| window.current_monitor().unwrap())
+            let _ = verify_and_update_startup_path();
+            
+            let args: Vec<String> = env::args().collect();
+            if args.contains(&"--start-minimized".to_string()) {
+                window.hide().unwrap();
             } else {
-                window.current_monitor().unwrap()
-            };
+                let target_monitor = if let Some((x, y)) = settings.window_pos {
+                    let monitors = window.available_monitors().unwrap();
+                    monitors.into_iter().find(|monitor| {
+                        let position = monitor.position();
+                        let size = monitor.size();
+                        x >= position.x && x < position.x + size.width as i32 &&
+                        y >= position.y && y < position.y + size.height as i32
+                    }).or_else(|| window.current_monitor().unwrap())
+                } else {
+                    window.current_monitor().unwrap()
+                };
 
-            if let Some(monitor) = target_monitor {
-                let monitor_position = monitor.position();
-                let monitor_size = monitor.size();
-                let window_size = window.outer_size().unwrap();
+                if let Some(monitor) = target_monitor {
+                    let monitor_position = monitor.position();
+                    let monitor_size = monitor.size();
+                    let window_size = window.outer_size().unwrap();
 
-                let center_x = monitor_position.x + (monitor_size.width as i32 - window_size.width as i32) / 2;
-                let center_y = monitor_position.y + (monitor_size.height as i32 - window_size.height as i32) / 2;
+                    let center_x = monitor_position.x + (monitor_size.width as i32 - window_size.width as i32) / 2;
+                    let center_y = monitor_position.y + (monitor_size.height as i32 - window_size.height as i32) / 2;
 
-                window.set_position(tauri::PhysicalPosition::new(center_x, center_y)).unwrap();
-            } else {
-                window.center().unwrap();
+                    window.set_position(tauri::PhysicalPosition::new(center_x, center_y)).unwrap();
+                } else {
+                    window.center().unwrap();
+                }
             }
             
             Ok(())

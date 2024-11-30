@@ -1,12 +1,9 @@
-import { useState } from 'react';
 import { appWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/tauri';
-import { FaMinus, FaRegWindowMaximize, FaTimes } from 'react-icons/fa';
+import { FaMinus, FaTimes } from 'react-icons/fa';
 import { Settings } from '../types';
 
 export const TitleBar: React.FC = () => {
-  const [, setIsMaximized] = useState(false);
-
   const handleMinimize = async () => {
     const settings = await invoke<Settings>('get_settings');
     if (settings.minimizeToTray) {
@@ -14,16 +11,6 @@ export const TitleBar: React.FC = () => {
     } else {
       await appWindow.minimize();
     }
-  };
-
-  const handleMaximize = async () => {
-    const maximized = await appWindow.isMaximized();
-    if (maximized) {
-      await appWindow.unmaximize();
-    } else {
-      await appWindow.maximize();
-    }
-    setIsMaximized(!maximized);
   };
 
   return (
@@ -42,12 +29,6 @@ export const TitleBar: React.FC = () => {
           className="w-12 h-full hover:bg-bl-light-gray transition-colors inline-flex items-center justify-center"
         >
           <FaMinus size={12} className="text-bl-red" />
-        </button>
-        <button
-          onClick={handleMaximize}
-          className="w-12 h-full hover:bg-bl-light-gray transition-colors inline-flex items-center justify-center"
-        >
-          <FaRegWindowMaximize size={12} className="text-bl-red" />
         </button>
         <button
           onClick={() => appWindow.close()}

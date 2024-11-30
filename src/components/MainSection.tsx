@@ -111,7 +111,7 @@ export const MainSection: React.FC = () => {
           disabled={loading || !selectedAccount || !selectedGame}
           className="btn-primary bg-bl-yellow w-full mt-4"
         >
-          {loading ? 'Launching...' : 'Launch Game'}
+          {loading ? 'Launching...' : 'Launch'}
         </button>
       </div>
 

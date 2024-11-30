@@ -38,14 +38,24 @@ const App: React.FC = () => {
     open('https://ko-fi.com/uoucat');
   };
 
+  const preventDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
   return (
     <div className="flex flex-col h-screen bg-bl-dark">
       <TitleBar />
       <div className="flex-1 p-6 overflow-auto">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <img src="icons/icon.ico" alt="Nidalee" className="w-6 h-6" />
-            <h1 className="text-2xl font-bold text-bl-red font-mono">NIDALEE</h1>
+            <img 
+              src="icons/icon.ico" 
+              alt="Nidalee" 
+              className="w-6 h-6 select-none" 
+              onDragStart={preventDrag}
+              draggable={false}
+            />
+            <h1 className="text-2xl text-bl-red" style={{ fontFamily: 'Righteous, cursive' }}>NIDALEE</h1>
           </div>
           <div className="flex items-center gap-4 text-gray-500">
             <button
