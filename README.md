@@ -58,7 +58,7 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 
 ## 💥 Installation
 
-1. Download the latest release from the [Releases](https://github.com/dancer/nidalee/releases) page
+1. Download the latest release from the [Releases](https://github.com/dancer/Nidalee/releases) page
 2. Run the installer (Nidalee.msi)
 3. Launch Nidalee from your desktop or start menu
 
