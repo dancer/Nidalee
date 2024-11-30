@@ -1,7 +1,7 @@
 # 💘 NIDALEE
 
 <div align="center">
-  <img src="icons/icon.ico" alt="Nidalee Logo" width="150"/>
+  <img src="src-tauri/icons/icon.ico" alt="Nidalee Logo" width="150"/>
   
   [![License](https://img.shields.io/badge/License-GPLv3-red.svg)](LICENSE)
   [![Made with Tauri](https://img.shields.io/badge/Made%20with-Tauri-red.svg)](https://tauri.app)
