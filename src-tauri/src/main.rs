@@ -380,7 +380,8 @@ fn set_auto_startup(enable: bool) -> Result<(), String> {
         println!("Canonical path: {:?}", canonical_path);
         
         if let Some(exe_path_str) = canonical_path.to_str() {
-            let registry_value = format!("\"{}\" --start-minimized", exe_path_str);
+            let clean_path = exe_path_str.replace(r"\\?\", "");
+            let registry_value = format!("\"{}\" --start-minimized", clean_path);
             println!("Setting registry value to: {}", registry_value);
             
             match key.set_value("Nidalee", &registry_value) {
