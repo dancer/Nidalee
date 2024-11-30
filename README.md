@@ -39,7 +39,7 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 - Responsive layout
 - Custom titlebar
 
-## 🚀 Planned Features
+## 💌 Planned Features
 
 💝 **Enhanced Security**
 - Backup and restore
