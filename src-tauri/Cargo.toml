@@ -25,6 +25,7 @@ windows = { version = "0.48", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_Foundation"
 ] }
+clipboard-win = "4.5"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

@@ -36,6 +36,7 @@ use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, GetForegroundWindow};
 use windows::Win32::Foundation::HWND;
 use std::ffi::CString;
 use windows::core::PCSTR;
+use clipboard_win::{formats, set_clipboard};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -59,7 +60,7 @@ pub struct Settings {
     pub startWithWindows: bool,
     pub minimizeToTray: bool,
     pub minimizeOnGameLaunch: bool,
-    pub loginDelay: Option<u32>,
+    pub loginDelay: u32,
     pub window_pos: Option<(i32, i32)>,
 }
 
@@ -155,23 +156,27 @@ async fn get_settings(
 }
 
 fn wait_for_riot_client() -> Result<(), String> {
-    let window_class = CString::new("RCLIENT").unwrap();
-    let window_title = CString::new("Riot Client").unwrap();
-    
-    for _ in 0..30 {
+    println!("Waiting for Riot Client window...");
+    for _ in 0..300 {
         unsafe {
-            let hwnd = FindWindowA(
-                PCSTR::from_raw(window_class.as_ptr() as *const u8),
-                PCSTR::from_raw(window_title.as_ptr() as *const u8)
+            let window = FindWindowA(
+                PCSTR::from_raw("Chrome_WidgetWin_1\0".as_ptr()),
+                PCSTR::from_raw("Riot Client\0".as_ptr())
             );
-            if hwnd != HWND(0) && hwnd == GetForegroundWindow() {
-                thread::sleep(Duration::from_secs(2));
+            
+            let window2 = FindWindowA(
+                PCSTR::from_raw("RCLIENT\0".as_ptr()),
+                PCSTR::from_raw("Riot Client\0".as_ptr())
+            );
+            
+            if (window != HWND(0) && window == GetForegroundWindow()) ||
+               (window2 != HWND(0) && window2 == GetForegroundWindow()) {
+                println!("Riot Client window found and focused");
                 return Ok(());
             }
         }
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_millis(100));
     }
-    
     Err("Timeout waiting for Riot Client".to_string())
 }
 
@@ -183,14 +188,14 @@ async fn launch_game(
     selected_game: String,
 ) -> Result<(), String> {
     let settings = state.settings.lock().unwrap();
+    let login_delay = settings.loginDelay.clamp(2, 30) as u64;
     
     if settings.minimizeOnGameLaunch {
         let _ = window.hide();
     }
     
     let riot_client_path = &settings.riot_client_path;
-    let login_delay = settings.loginDelay.unwrap_or(10) as u64;
-
+    
     println!("Launching Riot Client...");
     
     #[cfg(target_os = "windows")]
@@ -202,31 +207,33 @@ async fn launch_game(
             e.to_string()
         })?;
 
-    println!("Waiting for client to load... ({} seconds)", login_delay);
+    wait_for_riot_client()?;
+    
+    println!("Waiting {} seconds for client to load...", login_delay);
     thread::sleep(Duration::from_secs(login_delay));
     
     println!("Starting login sequence");
     let mut enigo = Enigo::new();
     
-    println!("Typing username: {}", account.username);
-    for c in account.username.chars() {
-        enigo.key_sequence(&c.to_string());
-        thread::sleep(Duration::from_millis(50));
-    }
-    thread::sleep(Duration::from_millis(500));
+    set_clipboard(formats::Unicode, &account.username)
+        .map_err(|e| e.to_string())?;
+    enigo.key_down(Key::Control);
+    enigo.key_click(Key::V);
+    enigo.key_up(Key::Control);
+    thread::sleep(Duration::from_millis(100));
     
-    println!("Pressing Tab");
     enigo.key_click(Key::Tab);
-    thread::sleep(Duration::from_millis(500));
+    thread::sleep(Duration::from_millis(100));
     
-    println!("Typing password");
-    for c in account.password.chars() {
-        enigo.key_sequence(&c.to_string());
-        thread::sleep(Duration::from_millis(50));
-    }
-    thread::sleep(Duration::from_millis(500));
+    set_clipboard(formats::Unicode, &account.password)
+        .map_err(|e| e.to_string())?;
+    enigo.key_down(Key::Control);
+    enigo.key_click(Key::V);
+    enigo.key_up(Key::Control);
+    thread::sleep(Duration::from_millis(100));
     
-    println!("Pressing Enter");
+    set_clipboard(formats::Unicode, "").map_err(|e| e.to_string())?;
+    
     enigo.key_click(Key::Return);
     
     thread::sleep(Duration::from_secs(3));
@@ -430,7 +437,7 @@ fn main() {
             startWithWindows: false,
             minimizeToTray: false,
             minimizeOnGameLaunch: false,
-            loginDelay: Some(10),
+            loginDelay: 10,
             window_pos: None,
         })
     } else {
@@ -441,7 +448,7 @@ fn main() {
             startWithWindows: false,
             minimizeToTray: false,
             minimizeOnGameLaunch: false,
-            loginDelay: Some(10),
+            loginDelay: 10,
             window_pos: None,
         }
     };

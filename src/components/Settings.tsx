@@ -69,15 +69,15 @@ export const Settings: React.FC = () => {
             <div className="flex gap-4 items-center">
               <input
                 type="range"
-                min="5"
-                max="60"
-                value={settings.loginDelay || 10}
+                min="0"
+                max="30"
+                value={settings.loginDelay}
                 onChange={(e: FormInputEvent) => 
                   setSettings(prev => ({ ...prev, loginDelay: parseInt(e.target.value) }))
                 }
                 className="flex-1 h-2 bg-bl-light-gray rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-bl-red [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer hover:[&::-webkit-slider-thumb]:bg-red-800"
               />
-              <span className="text-white min-w-[3rem]">{settings.loginDelay || 10}s</span>
+              <span className="text-white min-w-[3rem]">{settings.loginDelay}s</span>
             </div>
           </div>
 

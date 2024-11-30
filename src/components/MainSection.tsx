@@ -20,7 +20,7 @@ export const MainSection: React.FC = () => {
     try {
       const accounts = await invoke<Account[]>('get_accounts');
       setAccounts(accounts);
-      const uniqueCategories = [...new Set(accounts.map(acc => acc.category))];
+      const uniqueCategories = [...new Set(accounts.map(acc => acc.category))].filter(category => category !== "");
       setCategories(uniqueCategories);
     } catch (error) {
       console.error('Failed to load accounts:', error);
