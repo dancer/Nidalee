@@ -1,0 +1,37 @@
+[package]
+name = "nidalee"
+version = "0.1.0"
+description = "Nidalee by uoucat"
+authors = ["uoucat"]
+license = ""
+repository = ""
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.5", features = [ "window-all", "shell-execute", "shell-open", "dialog-open", "system-tray"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4"
+aes-gcm = "0.10.1"
+base64 = "0.21.0"
+rand = "0.8"
+enigo = "0.1.2"
+winapi = { version = "0.3", features = ["winbase"] }
+winreg = "0.50"
+windows = { version = "0.48", features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Foundation"
+] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+incremental = false
+opt-level = "s"

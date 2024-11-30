@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: #141414;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
+/* Custom input styles */
+input, select {
+  @apply bg-bl-gray border border-bl-light-gray rounded-md px-3 py-2;
+  @apply focus:outline-none focus:border-bl-red focus:ring-1 focus:ring-bl-red;
+  @apply transition-all duration-200;
+}
+
+/* Prevent dimming of other elements when input is focused */
+input:focus ~ * {
+  opacity: 1 !important;
+}
+
+/* Remove default focus ring color */
+input:focus-visible {
+  outline: none;
+}
+
+/* Custom button styles */
+button {
+  @apply transition-all duration-200;
+}
+
+.btn-primary {
+  @apply bg-bl-red text-black font-bold px-4 py-2 rounded-md;
+  @apply hover:bg-red-800;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-danger {
+  @apply bg-bl-red text-white font-bold px-4 py-2 rounded-md;
+  @apply hover:bg-red-600;
+}
+
+/* Title bar styles */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+button {
+  -webkit-app-region: no-drag;
+}
+
+/* Prevent text selection */
+* {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection in inputs */
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+} 

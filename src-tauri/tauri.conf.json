@@ -1,0 +1,81 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "Nidalee",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "shell": {
+        "all": false,
+        "execute": true,
+        "sidecar": false,
+        "open": true,
+        "scope": []
+      },
+      "dialog": {
+        "all": false,
+        "open": true
+      },
+      "window": {
+        "all": true,
+        "close": true,
+        "hide": true,
+        "show": true,
+        "maximize": true,
+        "minimize": true,
+        "unmaximize": true,
+        "unminimize": true,
+        "startDragging": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.uoucat.nidalee",
+      "icon": [
+        "icons/48.png",
+        "icons/128.png",
+        "icons/256.png",
+        "icons/mac.icns",
+        "icons/icon.ico"
+      ],
+      "windows": {
+        "wix": {},
+        "nsis": {},
+        "webviewFixedRuntimePath": null,
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "systemTray": {
+      "iconPath": "icons/icon.ico",
+      "iconAsTemplate": true,
+      "title": "Nidalee"
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "title": "Nidalee",
+        "width": 785,
+        "height": 750,
+        "minWidth": 560,
+        "minHeight": 750,
+        "maxWidth": 785,
+        "maxHeight": 750,
+        "decorations": false,
+        "center": true
+      }
+    ]
+  }
+} 

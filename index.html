@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/icons/icon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nidalee</title>
+    <style>
+      /* Prevent context menu */
+      body {
+        -webkit-user-select: none;
+        -webkit-app-region: drag;
+        user-select: none;
+      }
+
+      /* Allow interaction with inputs and buttons */
+      input, button, select, a, [role="button"] {
+        -webkit-app-region: no-drag;
+      }
+
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #141414;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: 'Courier New', monospace;
+      }
+
+      #loading-content {
+        color: #ff4f4f;
+        text-align: center;
+      }
+
+      .ascii-art {
+        font-size: 12px;
+        white-space: pre;
+        line-height: 1.2;
+        margin-bottom: 20px;
+        color: #ff4f4f;
+      }
+
+      .loading-text {
+        font-size: 18px;
+        margin-top: 20px;
+        overflow: hidden;
+        white-space: nowrap;
+        border-right: 2px solid #ff4f4f;
+        animation: typing 3s steps(40, end), blink-caret 0.75s step-end infinite;
+        color: #ff4f4f;
+      }
+
+      @keyframes typing {
+        from { width: 0 }
+        to { width: 100% }
+      }
+
+      @keyframes blink-caret {
+        from, to { border-color: transparent }
+        50% { border-color: #ff4f4f }
+      }
+
+      #root {
+        display: none;
+      }
+
+      #root.loaded {
+        display: block;
+      }
+    </style>
+  </head>
+  <body oncontextmenu="return false;">
+    <div id="loading-screen">
+      <div id="loading-content">
+        <div class="ascii-art">
+          ███╗   ██╗██╗██████╗  █████╗ ██╗     ███████╗███████╗
+          ████╗  ██║██║██╔══██╗██╔══██╗██║     ██╔════╝██╔════╝
+          ██╔██╗ ██║██║██║  ██║███████║██║     █████╗  █████╗  
+          ██║╚██╗██║██║██║  ██║██╔══██║██║     ██╔══╝  ██╔══╝  
+          ██║ ╚████║██║██████╔╝██║  ██║███████╗███████╗███████╗
+          ╚═╝  ╚═══╝╚═╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
+        </div>
+        <div class="loading-text">INITIALIZING SYSTEM...</div>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          const loadingScreen = document.getElementById('loading-screen');
+          const root = document.getElementById('root');
+          loadingScreen.style.opacity = '0';
+          loadingScreen.style.transition = 'opacity 0.5s ease-out';
+          root.classList.add('loaded');
+          setTimeout(() => {
+            loadingScreen.style.display = 'none';
+          }, 500);
+        }, 2000);
+      });
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html> 
