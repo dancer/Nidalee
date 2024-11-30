@@ -418,9 +418,14 @@ fn cleanup_on_uninstall() -> Result<(), String> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
     
-    // Only remove the registry entry, keep user data
+    // Remove registry entry
     if let Ok((key, _)) = hkcu.create_subkey(path) {
         let _ = key.delete_value("Nidalee");
+    }
+
+    // Try to remove the current executable
+    if let Ok(exe_path) = env::current_exe() {
+        let _ = fs::remove_file(exe_path);
     }
 
     // Don't remove app data directory - keep user accounts and settings
