@@ -19,7 +19,7 @@ export const TitleBar: React.FC = () => {
       className="h-8 bg-bl-dark border-b border-bl-light-gray flex justify-between items-center select-none"
     >
       <div data-tauri-drag-region className="flex-1 px-4">
-        <span className="text-gray-500 text-sm">v0.1.0</span>
+        <span className="text-gray-500 text-sm">v0.1.1</span>
       </div>
       
       {/* Window controls */}

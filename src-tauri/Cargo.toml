@@ -1,6 +1,6 @@
 [package]
 name = "nidalee"
-version = "0.1.0"
+version = "0.1.1"
 description = "Nidalee by uoucat"
 authors = ["uoucat"]
 license = ""

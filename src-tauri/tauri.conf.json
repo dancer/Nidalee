@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "Nidalee",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "tauri": {
     "allowlist": {
@@ -48,13 +48,7 @@
       "windows": {
         "wix": {},
         "nsis": {
-          "oneClick": true,
-          "perMachine": false,
-          "allowToChangeInstallationDirectory": false,
-          "uninstallBeforeInstalling": true,
-          "shortcutName": "Nidalee",
-          "installerIcon": "icons/icon.ico",
-          "uninstallerIcon": "icons/icon.ico"
+          "installerIcon": "icons/icon.ico"
         },
         "webviewFixedRuntimePath": null,
         "certificateThumbprint": null,
