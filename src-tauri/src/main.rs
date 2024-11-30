@@ -414,24 +414,6 @@ fn get_clean_exe_path() -> Result<String, String> {
     }
 }
 
-fn cleanup_on_uninstall() -> Result<(), String> {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
-    
-    // Remove registry entry
-    if let Ok((key, _)) = hkcu.create_subkey(path) {
-        let _ = key.delete_value("Nidalee");
-    }
-
-    // Try to remove the current executable
-    if let Ok(exe_path) = env::current_exe() {
-        let _ = fs::remove_file(exe_path);
-    }
-
-    // Don't remove app data directory - keep user accounts and settings
-    Ok(())
-}
-
 fn main() {
     let app_data_dir = path::app_data_dir(&tauri::Config::default()).unwrap();
     create_dir_all(&app_data_dir).unwrap();
@@ -491,10 +473,6 @@ fn main() {
             SystemTrayEvent::MenuItemClick { id, .. } => {
                 match id.as_str() {
                     "quit" => {
-                        // Check if this is an uninstall
-                        if std::env::args().any(|arg| arg == "--uninstall") {
-                            let _ = cleanup_on_uninstall();
-                        }
                         app.exit(0);
                     }
                     "show" => {
@@ -529,11 +507,8 @@ fn main() {
             check_first_run
         ])
         .setup(|app| {
-            // During normal startup, verify the startup path
-            if !std::env::args().any(|arg| arg == "--uninstall") {
-                if let Err(e) = verify_startup_path() {
-                    println!("Failed to verify startup path: {}", e);
-                }
+            if let Err(e) = verify_startup_path() {
+                println!("Failed to verify startup path: {}", e);
             }
             
             let window = app.get_window("main").unwrap();
