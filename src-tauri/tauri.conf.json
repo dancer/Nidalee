@@ -47,7 +47,15 @@
       ],
       "windows": {
         "wix": {},
-        "nsis": {},
+        "nsis": {
+          "oneClick": true,
+          "perMachine": false,
+          "allowToChangeInstallationDirectory": false,
+          "uninstallBeforeInstalling": true,
+          "shortcutName": "Nidalee",
+          "installerIcon": "icons/icon.ico",
+          "uninstallerIcon": "icons/icon.ico"
+        },
         "webviewFixedRuntimePath": null,
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
