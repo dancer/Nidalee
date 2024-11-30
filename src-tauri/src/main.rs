@@ -310,23 +310,33 @@ fn verify_riot_client_path(path: &str) -> bool {
     }
 }
 
-fn verify_and_update_startup_path() -> Result<(), String> {
+fn set_auto_startup(enable: bool) -> Result<(), String> {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
+    let (key, _) = hkcu.create_subkey(path).map_err(|e| e.to_string())?;
+
+    if enable {
+        let clean_path = get_clean_exe_path()?;
+        let registry_value = format!("\"{}\" --start-minimized", clean_path);
+        key.set_value("Nidalee", &registry_value).map_err(|e| e.to_string())?;
+    } else {
+        let _ = key.delete_value("Nidalee");
+    }
+    Ok(())
+}
+
+fn verify_startup_path() -> Result<(), String> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
     
     if let Ok((key, _)) = hkcu.create_subkey(path) {
-        if let Ok(current_value) = key.get_value::<String, _>("Nidalee") {
-            if let Ok(exe_path) = env::current_exe() {
-                if let Ok(canonical_path) = exe_path.canonicalize() {
-                    if let Some(exe_path_str) = canonical_path.to_str() {
-                        let expected_value = format!("\"{}\" --start-minimized", exe_path_str);
-                        
-                        if current_value != expected_value {
-                            println!("Updating startup path from: {} to: {}", current_value, expected_value);
-                            let _ = key.set_value("Nidalee", &expected_value);
-                        }
-                    }
-                }
+        if let Ok(current_path) = key.get_value::<String, _>("Nidalee") {
+            let clean_current = current_path.replace(r"\\?\", "");
+            let clean_path = get_clean_exe_path()?;
+            let expected_value = format!("\"{}\" --start-minimized", clean_path);
+            
+            if clean_current != expected_value {
+                key.set_value("Nidalee", &expected_value).map_err(|e| e.to_string())?;
             }
         }
     }
@@ -345,67 +355,6 @@ async fn get_auto_start_status() -> Result<bool, String> {
         .open_subkey(r"Software\Microsoft\Windows\CurrentVersion\Run")
         .and_then(|key| key.get_value::<String, _>("Nidalee"))
         .is_ok())
-}
-
-fn set_auto_startup(enable: bool) -> Result<(), String> {
-    println!("=== Auto Startup Debug ===");
-    println!("Setting auto startup: {}", enable);
-    
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
-    println!("Registry path: {}", path);
-    
-    let (key, _) = hkcu.create_subkey(path).map_err(|e| {
-        println!("Failed to create/open registry key: {}", e);
-        e.to_string()
-    })?;
-
-    if enable {
-        let exe_path = match env::current_exe() {
-            Ok(path) => path,
-            Err(e) => {
-                println!("Failed to get executable path: {}", e);
-                return Err(e.to_string());
-            }
-        };
-        println!("Found executable path: {:?}", exe_path);
-
-        let canonical_path = match exe_path.canonicalize() {
-            Ok(path) => path,
-            Err(e) => {
-                println!("Failed to canonicalize path: {}", e);
-                return Err(e.to_string());
-            }
-        };
-        println!("Canonical path: {:?}", canonical_path);
-        
-        if let Some(exe_path_str) = canonical_path.to_str() {
-            let clean_path = exe_path_str.replace(r"\\?\", "");
-            let registry_value = format!("\"{}\" --start-minimized", clean_path);
-            println!("Setting registry value to: {}", registry_value);
-            
-            match key.set_value("Nidalee", &registry_value) {
-                Ok(_) => println!("Successfully set registry value"),
-                Err(e) => {
-                    println!("Failed to set registry value: {}", e);
-                    return Err(e.to_string());
-                }
-            }
-        } else {
-            println!("Failed to convert path to string");
-            return Err("Invalid path encoding".to_string());
-        }
-    } else {
-        println!("Removing registry value");
-        if let Err(e) = key.delete_value("Nidalee") {
-            println!("Failed to remove registry value: {}", e);
-            return Err(e.to_string());
-        }
-        println!("Successfully removed registry value");
-    }
-
-    println!("=== End Auto Startup Debug ===");
-    Ok(())
 }
 
 fn get_app_data_dir() -> Result<PathBuf, String> {
@@ -454,29 +403,15 @@ async fn check_first_run() -> Result<bool, String> {
     }
 }
 
-fn verify_startup_path() -> Result<(), String> {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
+fn get_clean_exe_path() -> Result<String, String> {
+    let exe_path = env::current_exe().map_err(|e| e.to_string())?;
+    let canonical_path = exe_path.canonicalize().map_err(|e| e.to_string())?;
     
-    if let Ok((key, _)) = hkcu.create_subkey(path) {
-        if let Ok(current_path) = key.get_value::<String, _>("Nidalee") {
-            if let Ok(exe_path) = env::current_exe() {
-                if let Ok(canonical_path) = exe_path.canonicalize() {
-                    if let Some(exe_path_str) = canonical_path.to_str() {
-                        let expected_value = format!("\"{}\" --start-minimized", exe_path_str);
-                        
-                        if current_path != expected_value {
-                            println!("Updating startup path from: {} to: {}", current_path, expected_value);
-                            if let Err(e) = key.set_value("Nidalee", &expected_value) {
-                                println!("Failed to update startup path: {}", e);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    if let Some(path_str) = canonical_path.to_str() {
+        Ok(path_str.replace(r"\\?\", ""))
+    } else {
+        Err("Failed to convert path to string".to_string())
     }
-    Ok(())
 }
 
 fn main() {
@@ -579,8 +514,6 @@ fn main() {
             let window = app.get_window("main").unwrap();
             let state = app.state::<AppState>();
             let settings = state.settings.lock().unwrap();
-            
-            let _ = verify_and_update_startup_path();
             
             let args: Vec<String> = env::args().collect();
             if args.contains(&"--start-minimized".to_string()) {
