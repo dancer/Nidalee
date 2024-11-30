@@ -543,6 +543,7 @@ fn main() {
                 } else {
                     window.center().unwrap();
                 }
+                window.show().unwrap();
             }
             
             Ok(())
