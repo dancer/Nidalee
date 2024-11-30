@@ -220,17 +220,17 @@ async fn launch_game(
     enigo.key_down(Key::Control);
     enigo.key_click(Key::V);
     enigo.key_up(Key::Control);
-    thread::sleep(Duration::from_millis(100));
+    thread::sleep(Duration::from_millis(50));
     
     enigo.key_click(Key::Tab);
-    thread::sleep(Duration::from_millis(100));
+    thread::sleep(Duration::from_millis(30));
     
     set_clipboard(formats::Unicode, &account.password)
         .map_err(|e| e.to_string())?;
     enigo.key_down(Key::Control);
     enigo.key_click(Key::V);
     enigo.key_up(Key::Control);
-    thread::sleep(Duration::from_millis(100));
+    thread::sleep(Duration::from_millis(50));
     
     set_clipboard(formats::Unicode, "").map_err(|e| e.to_string())?;
     
