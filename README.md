@@ -9,31 +9,31 @@
   [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-red.svg)](https://www.rust-lang.org/)
 </div>
 
-## 💖 About
+## 🩷 About
 
 Nidalee is a sleek account manager for League of Legends and Valorant, built with privacy and security in mind. It provides a seamless experience for managing multiple accounts and launching your favorite games.
 
-## ✨ Current Features
+## 💖 Current Features
 
-❤️ **Account Management**
+💕 **Account Management**
 - Secure account storage with encryption
 - Easy account switching
 - Category organization
 - Quick launch for both games
 
-❤️ **System Integration**
+💕 **System Integration**
 - Start with Windows
 - Minimize to tray
 - Auto-minimize on game launch
 - Custom login delay settings
 
-❤️ **Security**
+💕 **Security**
 - Local data storage
 - AES-256 encryption
 - No cloud storage
 - Password protection
 
-❤️ **User Interface**
+💕 **User Interface**
 - Modern dark theme
 - Clean and intuitive design
 - Responsive layout
@@ -41,28 +41,28 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 
 ## 💌 Planned Features
 
-💝 **Enhanced Security**
+💞 **Enhanced Security**
 - Backup and restore
 - High Quality Data protection
 
-💝 **Advanced Features**
+💞 **Advanced Features**
 - Data backup and restore
 - Multi-language support
 
-💝 **Quality of Life**
+💞 **Quality of Life**
 - Custom themes
 - Keyboard shortcuts
 - Account notes
 - Search functionality
 - Unban Timer
 
-## 💥 Installation
+## 💓 Installation
 
 1. Download the latest release from the [Releases](https://github.com/dancer/Nidalee/releases) page
 2. Run the installer (Nidalee.msi)
 3. Launch Nidalee from your desktop or start menu
 
-## ⭐ Getting Started
+## 💝 Getting Started
 
 1. Launch Nidalee
 2. Add your first account in the "Add Account" tab
@@ -75,6 +75,6 @@ If you like this project, please consider supporting it by giving it a star ⭐ 
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/uoucat)
 
-## 💯 License
+## 💘 License
 
 This project is licensed under the GPLv3 License - see the [LICENSE](LICENSE) file for details.
