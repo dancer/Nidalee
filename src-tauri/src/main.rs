@@ -35,8 +35,9 @@ use std::fs::create_dir_all;
 use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, GetForegroundWindow};
 use windows::Win32::Foundation::HWND;
 use std::ffi::CString;
-use windows::core::PCSTR;
 use clipboard_win::{formats, set_clipboard};
+use windows::core::PCSTR;
+use std::fs::read_dir;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -118,10 +119,14 @@ async fn delete_account(
 
 #[tauri::command]
 async fn save_settings(
-    settings: Settings,
+    mut settings: Settings,
     state: tauri::State<'_, AppState>
 ) -> Result<(), String> {
     println!("Saving settings: {:?}", settings);
+    
+    settings.riot_client_path = settings.riot_client_path.replace('/', "\\");
+    settings.league_path = settings.league_path.replace('/', "\\");
+    settings.valorant_path = settings.valorant_path.replace('/', "\\");
     
     if let Err(e) = set_auto_startup(settings.startWithWindows) {
         println!("Failed to set auto startup: {}", e);
@@ -157,7 +162,10 @@ async fn get_settings(
 
 fn wait_for_riot_client() -> Result<(), String> {
     println!("Waiting for Riot Client window...");
-    for _ in 0..300 {
+    let max_attempts = 30;
+    let mut attempts = 0;
+
+    while attempts < max_attempts {
         unsafe {
             let window = FindWindowA(
                 PCSTR::from_raw("Chrome_WidgetWin_1\0".as_ptr()),
@@ -169,15 +177,17 @@ fn wait_for_riot_client() -> Result<(), String> {
                 PCSTR::from_raw("Riot Client\0".as_ptr())
             );
             
-            if (window != HWND(0) && window == GetForegroundWindow()) ||
-               (window2 != HWND(0) && window2 == GetForegroundWindow()) {
-                println!("Riot Client window found and focused");
+            if window != HWND(0) || window2 != HWND(0) {
+                println!("Riot Client window found!");
                 return Ok(());
             }
         }
-        thread::sleep(Duration::from_millis(100));
+        
+        thread::sleep(Duration::from_secs(1));
+        attempts += 1;
     }
-    Err("Timeout waiting for Riot Client".to_string())
+    
+    Err("Riot Client window not found after 30 seconds".to_string())
 }
 
 #[tauri::command]
@@ -187,16 +197,45 @@ async fn launch_game(
     account: Account,
     selected_game: String,
 ) -> Result<(), String> {
-    let settings = state.settings.lock().unwrap();
+    let mut settings = state.settings.lock().unwrap();
     let login_delay = settings.loginDelay.clamp(2, 30) as u64;
+    
+    if settings.riot_client_path.is_empty() {
+        println!("Riot Client path not set, searching automatically...");
+        if let Some(path) = find_riot_client_path() {
+            println!("Found Riot Client at: {}", path);
+            settings.riot_client_path = path;
+            
+            let settings_path = get_app_data_dir()?.join("settings.json");
+            if let Ok(json) = serde_json::to_string(&*settings) {
+                fs::write(settings_path, json).map_err(|e| e.to_string())?;
+            }
+        } else {
+            return Err("Could not find Riot Client. Please set the path in Settings.".to_string());
+        }
+    }
+
+    let riot_client_path = settings.riot_client_path.clone();
+    if !verify_riot_client_path(&riot_client_path) {
+        println!("Invalid Riot Client path, searching for new path...");
+        if let Some(path) = find_riot_client_path() {
+            println!("Found new Riot Client path: {}", path);
+            settings.riot_client_path = path;
+            
+            let settings_path = get_app_data_dir()?.join("settings.json");
+            if let Ok(json) = serde_json::to_string(&*settings) {
+                fs::write(settings_path, json).map_err(|e| e.to_string())?;
+            }
+        } else {
+            return Err("Could not find Riot Client. Please set the path in Settings.".to_string());
+        }
+    }
     
     if settings.minimizeOnGameLaunch {
         let _ = window.hide();
     }
     
-    let riot_client_path = &settings.riot_client_path;
-    
-    println!("Launching Riot Client...");
+    println!("Launching Riot Client from: {}", riot_client_path);
     
     #[cfg(target_os = "windows")]
     let mut command = Command::new(&riot_client_path)
@@ -215,28 +254,24 @@ async fn launch_game(
     println!("Starting login sequence");
     let mut enigo = Enigo::new();
     
-    set_clipboard(formats::Unicode, &account.username)
-        .map_err(|e| e.to_string())?;
-    enigo.key_down(Key::Control);
-    enigo.key_click(Key::V);
-    enigo.key_up(Key::Control);
-    thread::sleep(Duration::from_millis(50));
+    for c in account.username.chars() {
+        enigo.key_sequence(&c.to_string());
+        thread::sleep(Duration::from_millis(10));
+    }
+    thread::sleep(Duration::from_millis(30));  
     
     enigo.key_click(Key::Tab);
-    thread::sleep(Duration::from_millis(30));
+    thread::sleep(Duration::from_millis(20));  
     
-    set_clipboard(formats::Unicode, &account.password)
-        .map_err(|e| e.to_string())?;
-    enigo.key_down(Key::Control);
-    enigo.key_click(Key::V);
-    enigo.key_up(Key::Control);
-    thread::sleep(Duration::from_millis(50));
-    
-    set_clipboard(formats::Unicode, "").map_err(|e| e.to_string())?;
+    for c in account.password.chars() {
+        enigo.key_sequence(&c.to_string());
+        thread::sleep(Duration::from_millis(10));  
+    }
+    thread::sleep(Duration::from_millis(30));  
     
     enigo.key_click(Key::Return);
     
-    thread::sleep(Duration::from_secs(3));
+    thread::sleep(Duration::from_secs(2));
 
     println!("Launching game: {}", selected_game);
     let launch_args = match selected_game.as_str() {
@@ -261,60 +296,140 @@ async fn launch_game(
     if let Some(acc) = accounts.get_mut(&account.id) {
         acc.last_login = Some(Utc::now().to_rfc3339());
         
+        let accounts_path = get_app_data_dir()?.join("accounts.json");
         let accounts_json = serde_json::to_string(&*accounts)
             .map_err(|e| e.to_string())?;
-        fs::write("accounts.json", accounts_json)
+        fs::write(accounts_path, accounts_json)
             .map_err(|e| e.to_string())?;
     }
 
     Ok(())
 }
 
-fn find_riot_client_path() -> Option<String> {
-    let common_paths = vec![
-        "C:\\Riot Games\\Riot Client\\RiotClientServices.exe",
-        "C:\\Program Files\\Riot Games\\Riot Client\\RiotClientServices.exe",
-        "C:\\Program Files (x86)\\Riot Games\\Riot Client\\RiotClientServices.exe",
-    ];
-
-    for path in common_paths {
-        if Path::new(path).exists() {
-            return Some(path.to_string());
+fn get_windows_drives() -> Vec<String> {
+    let mut drives = Vec::new();
+    for letter in b'A'..=b'Z' {
+        let drive = format!("{}:\\", letter as char);
+        if Path::new(&drive).exists() {
+            drives.push(drive);
         }
     }
+    drives
+}
 
-    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-    let paths_to_check = [
-        "SOFTWARE\\WOW6432Node\\Riot Games\\Riot Client",
-        "SOFTWARE\\Riot Games\\Riot Client",
+fn find_riot_client_path() -> Option<String> {
+    println!("Starting Riot Client path search...");
+
+    let registry_paths = [
+        (HKEY_LOCAL_MACHINE, "SOFTWARE\\WOW6432Node\\Riot Games\\Riot Client"),
+        (HKEY_LOCAL_MACHINE, "SOFTWARE\\Riot Games\\Riot Client"),
+        (HKEY_CURRENT_USER, "SOFTWARE\\Riot Games\\Riot Client"),
     ];
 
-    for reg_path in paths_to_check {
-        if let Ok(riot_key) = hklm.open_subkey(reg_path) {
-            if let Ok(install_dir) = riot_key.get_value::<String, _>("InstallDir") {
-                let client_path = Path::new(&install_dir)
-                    .join("RiotClientServices.exe");
+    println!("Checking registry keys...");
+    for (hkey, path) in &registry_paths {
+        if let Ok(key) = RegKey::predef(*hkey).open_subkey(path) {
+            if let Ok(install_dir) = key.get_value::<String, _>("InstallLocation") {
+                let client_path = Path::new(&install_dir).join("RiotClientServices.exe");
                 if client_path.exists() {
+                    println!("Found via registry: {}", client_path.display());
                     return Some(client_path.to_string_lossy().into_owned());
                 }
             }
         }
     }
 
+    let common_paths = vec![
+        "C:\\Riot Games\\Riot Client\\RiotClientServices.exe",
+        "C:\\Program Files\\Riot Games\\Riot Client\\RiotClientServices.exe",
+        "C:\\Program Files (x86)\\Riot Games\\Riot Client\\RiotClientServices.exe",
+    ];
+
+    println!("Checking common paths...");
+    for path in &common_paths {
+        if Path::new(path).exists() {
+            println!("Found in common path: {}", path);
+            return Some(path.to_string());
+        }
+    }
+
+    println!("Searching all drives...");
+    for drive in get_windows_drives() {
+        let direct_path = format!("{}Riot Games\\Riot Client\\RiotClientServices.exe", drive);
+        if Path::new(&direct_path).exists() {
+            println!("Found in drive root: {}", direct_path);
+            return Some(direct_path);
+        }
+
+        let program_files = vec![
+            format!("{}Program Files\\Riot Games", drive),
+            format!("{}Program Files (x86)\\Riot Games", drive),
+            format!("{}Riot Games", drive),
+        ];
+
+        for dir in program_files {
+            if let Some(path) = search_directory_for_riot_client(&dir) {
+                println!("Found via directory search: {}", path);
+                return Some(path);
+            }
+        }
+    }
+
+    println!("Checking running processes...");
+    if let Some(path) = find_riot_client_from_process() {
+        println!("Found via process: {}", path);
+        return Some(path);
+    }
+
+    println!("Riot Client not found in any location");
+    None
+}
+
+fn search_directory_for_riot_client(start_path: &str) -> Option<String> {
+    if !Path::new(start_path).exists() {
+        return None;
+    }
+
+    let target = "RiotClientServices.exe";
+    let mut dirs_to_check = vec![start_path.to_string()];
+
+    while let Some(dir) = dirs_to_check.pop() {
+        if let Ok(entries) = read_dir(&dir) {
+            for entry in entries.filter_map(Result::ok) {
+                let path = entry.path();
+                if path.is_file() && path.file_name().and_then(|n| n.to_str()) == Some(target) {
+                    return Some(path.to_string_lossy().into_owned());
+                } else if path.is_dir() {
+                    dirs_to_check.push(path.to_string_lossy().into_owned());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn find_riot_client_from_process() -> Option<String> {
+    #[cfg(windows)]
+    {
+        let output = Command::new("wmic")
+            .args(["process", "where", "name='RiotClientServices.exe'", "get", "ExecutablePath"])
+            .output()
+            .ok()?;
+
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        for line in output_str.lines() {
+            let trimmed = line.trim();
+            if trimmed.ends_with("RiotClientServices.exe") {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
     None
 }
 
 fn verify_riot_client_path(path: &str) -> bool {
-    if Path::new(path).exists() {
-        let file_name = Path::new(path)
-            .file_name()
-            .and_then(|name| name.to_str())
-            .unwrap_or("");
-        
-        file_name.eq_ignore_ascii_case("RiotClientServices.exe")
-    } else {
-        false
-    }
+    let normalized_path = path.replace('/', "\\");
+    Path::new(&normalized_path).exists()
 }
 
 fn set_auto_startup(enable: bool) -> Result<(), String> {
@@ -421,36 +536,130 @@ fn get_clean_exe_path() -> Result<String, String> {
     }
 }
 
+fn login_account(
+    account: Account,
+    selected_game: String,
+    state: tauri::State<'_, AppState>
+) -> Result<(), String> {
+    let settings = state.settings.lock().unwrap();
+    let riot_client_path = &settings.riot_client_path;
+    let login_delay = settings.loginDelay as u64;
+
+    if !verify_riot_client_path(riot_client_path) {
+        return Err("Invalid Riot Client path".to_string());
+    }
+
+    wait_for_riot_client()?;
+    
+    println!("Waiting {} seconds for client to load...", login_delay);
+    thread::sleep(Duration::from_secs(login_delay));
+    
+    println!("Starting login sequence");
+    let mut enigo = Enigo::new();
+    
+    for c in account.username.chars() {
+        enigo.key_sequence(&c.to_string());
+        thread::sleep(Duration::from_millis(20));
+    }
+    thread::sleep(Duration::from_millis(50));
+    
+    enigo.key_click(Key::Tab);
+    thread::sleep(Duration::from_millis(30));
+    
+    for c in account.password.chars() {
+        enigo.key_sequence(&c.to_string());
+        thread::sleep(Duration::from_millis(20));
+    }
+    thread::sleep(Duration::from_millis(50));
+    
+    enigo.key_click(Key::Return);
+    
+    thread::sleep(Duration::from_secs(3));
+
+    println!("Launching game: {}", selected_game);
+    let launch_args = match selected_game.as_str() {
+        "valorant" => "--launch-product=valorant --launch-patchline=live",
+        "league" => "--launch-product=league_of_legends --launch-patchline=live",
+        _ => return Err("Invalid game type".to_string()),
+    };
+
+    #[cfg(target_os = "windows")]
+    Command::new(&riot_client_path)
+        .args(launch_args.split_whitespace())
+        .creation_flags(0x08000000)
+        .spawn()
+        .map_err(|e| {
+            println!("Failed to launch game: {}", e);
+            e.to_string()
+        })?;
+    
+    println!("Login sequence completed");
+    
+    let mut accounts = state.accounts.lock().unwrap();
+    if let Some(acc) = accounts.get_mut(&account.id) {
+        acc.last_login = Some(Utc::now().to_rfc3339());
+        
+        let accounts_path = get_app_data_dir()?.join("accounts.json");
+        let accounts_json = serde_json::to_string(&*accounts)
+            .map_err(|e| e.to_string())?;
+        fs::write(accounts_path, accounts_json)
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 fn main() {
-    let app_data_dir = path::app_data_dir(&tauri::Config::default()).unwrap();
-    create_dir_all(&app_data_dir).unwrap();
+    let app_data_dir = get_app_data_dir().unwrap();
     
     let settings_path = app_data_dir.join("settings.json");
     let accounts_path = app_data_dir.join("accounts.json");
     let categories_path = app_data_dir.join("categories.json");
 
+    println!("Using app data directory: {}", app_data_dir.display());
+    
+    let settings_path = app_data_dir.join("settings.json");
+    let accounts_path = app_data_dir.join("accounts.json");
+    let categories_path = app_data_dir.join("categories.json");
+
+    let riot_client_path = find_riot_client_path()
+        .unwrap_or_else(|| String::new());
+    println!("Found Riot Client path: {}", riot_client_path);
+
     let settings = if let Ok(content) = fs::read_to_string(&settings_path) {
-        serde_json::from_str(&content).unwrap_or_else(|_| Settings {
-            riot_client_path: String::new(),
+        let mut settings: Settings = serde_json::from_str(&content).unwrap_or_else(|_| Settings {
+            riot_client_path: riot_client_path.clone(),
             league_path: String::new(),
             valorant_path: String::new(),
             startWithWindows: false,
             minimizeToTray: false,
             minimizeOnGameLaunch: false,
-            loginDelay: 10,
+            loginDelay: 5,
             window_pos: None,
-        })
-    } else {
-        Settings {
-            riot_client_path: String::new(),
-            league_path: String::new(),
-            valorant_path: String::new(),
-            startWithWindows: false,
-            minimizeToTray: false,
-            minimizeOnGameLaunch: false,
-            loginDelay: 10,
-            window_pos: None,
+        });
+
+        if settings.riot_client_path.is_empty() && !riot_client_path.is_empty() {
+            settings.riot_client_path = riot_client_path;
+            if let Ok(json) = serde_json::to_string(&settings) {
+                let _ = fs::write(&settings_path, json);
+            }
         }
+        settings
+    } else {
+        let settings = Settings {
+            riot_client_path,
+            league_path: String::new(),
+            valorant_path: String::new(),
+            startWithWindows: false,
+            minimizeToTray: false,
+            minimizeOnGameLaunch: false,
+            loginDelay: 5,
+            window_pos: None,
+        };
+        if let Ok(json) = serde_json::to_string(&settings) {
+            let _ = fs::write(&settings_path, json);
+        }
+        settings
     };
 
     let accounts = if let Ok(content) = fs::read_to_string(&accounts_path) {

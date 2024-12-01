@@ -121,6 +121,11 @@ export const MainSection: React.FC = () => {
           Select your account and game to launch. If the login process fails, try adjusting the login delay in Settings. 
           A longer delay gives the client more time to load before attempting to log in.
         </p>
+        <div className="bg-[#1a1111] border border-bl-red rounded p-1.5 mt-2">
+          <p className="text-bl-red text-xs">
+            Do not switch windows during login - credentials may be typed in wrong window
+          </p>
+        </div>
       </div>
     </div>
   );
