@@ -7,6 +7,9 @@
   [![Made with Tauri](https://img.shields.io/badge/Made%20with-Tauri-red.svg)](https://tauri.app)
   [![Built with React](https://img.shields.io/badge/Built%20with-React-red.svg)](https://reactjs.org/)
   [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-red.svg)](https://www.rust-lang.org/)
+
+  <img src="preview.png" alt="Nidalee Preview" width="800"/>
+  <p align="center"><i>A modern account manager for League of Legends and Valorant</i></p>
 </div>
 
 ## 🩷 About
