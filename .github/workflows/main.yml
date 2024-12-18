@@ -1,0 +1,36 @@
+            - name: Submit a Signing Request
+  # You may pin to the exact commit or the version.
+  # uses: SignPath/github-action-submit-signing-request@b889265c0bf404280c1fc05a4f00ad8da5fbe5be
+  uses: SignPath/github-action-submit-signing-request@v1
+  with: 
+    # GitHub Actions SignPath connector URL
+    connector-url: # default is https://githubactions.connectors.signpath.io
+    # SignPath REST API access token. Read more in the SignPath documentation: https://about.signpath.io/redirects/connectors/api-token
+    api-token: 
+    # SignPath organization ID
+    organization-id: 
+    # SignPath project slug
+    project-slug: 
+    # SignPath signing policy slug
+    signing-policy-slug: 
+    # SignPath artifact configuration slug
+    artifact-configuration-slug: # optional
+    # Id of the Github Actions artifact. Use `steps.<step-id>.outputs.artifact-id` from the preceding actions/upload-artifact action step.
+    github-artifact-id: 
+    # GitHub access token used to read job details and download the artifact. Defaults to the [`secrets.GITHUB_TOKEN`](https://docs.github.com/en/actions/security-guides/automatic-token-authentication).
+    github-token: # optional, default is ${{ github.token }}
+    # Preview only: Contact SignPath support for details.
+    github-extended-verification-token: # optional
+    # Multiline-string of values that map to user-defined parameters in the Artifact Configuration. Use one line per parameter with the format <name>: "<value>" where <value> needs to be a valid JSON string.
+    parameters: # optional
+    # Maximum time in seconds that the action will wait for the signing request to complete
+    wait-for-completion-timeout-in-seconds: # optional, default is 600
+    # Total time in seconds that the action will wait for a single service call to succeed (across several retries)
+    service-unavailable-timeout-in-seconds: # optional, default is 600
+    # HTTP timeout when downloading the signed artifact.
+    download-signed-artifact-timeout-in-seconds: # optional, default is 300
+    # If true, the action will wait for the signing request to complete
+    wait-for-completion: # optional, default is true
+    # Path where the signed artifact will be saved. If not specified, the task will not download the signed artifact from SignPath
+    output-artifact-directory: # optional
+          
