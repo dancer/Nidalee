@@ -39,7 +39,6 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 💕 **Security**
 
 - Local data storage
-- AES-256 encryption
 - No cloud storage
 - Password protection
 - Riot Games approved
