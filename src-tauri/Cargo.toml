@@ -22,8 +22,10 @@ enigo = "0.1.2"
 winapi = { version = "0.3", features = ["winbase"] }
 winreg = "0.50"
 windows = { version = "0.48", features = [
+    "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
-    "Win32_Foundation"
+    "Win32_System_Threading",
+    "Win32_Security"
 ] }
 clipboard-win = "4.5"
 

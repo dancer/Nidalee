@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/tauri';
 import { Account } from '../types';
-import { FaTrash, FaEye, FaEyeSlash, FaEdit, FaPlus } from 'react-icons/fa';
+import { FaTrash, FaEye, FaEyeSlash, FaEdit, FaPlus, FaUser, FaFolder, FaUsers, FaLeaf, FaStar, FaTags, FaCheck, FaTimes } from 'react-icons/fa';
 import { FormSelectEvent } from '../types/events';
 
 export const Statistics: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [showPassword, setShowPassword] = useState<{[key: string]: boolean}>({});
+  const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategory, setNewCategory] = useState('');
-  const [editingCategory, setEditingCategory] = useState<{old: string, new: string} | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{ old: string, new: string } | null>(null);
 
   const togglePasswordVisibility = (accountId: string) => {
     setShowPassword(prev => ({ ...prev, [accountId]: !prev[accountId] }));
@@ -53,7 +53,7 @@ export const Statistics: React.FC = () => {
 
   const handleEditCategory = async (oldCategory: string, newCategory: string) => {
     if (!newCategory.trim() || oldCategory === newCategory) return;
-    
+
     const updatedAccounts = accounts.map(account => {
       if (account.category === oldCategory) {
         return { ...account, category: newCategory };
@@ -65,7 +65,7 @@ export const Statistics: React.FC = () => {
       await invoke('save_account', { account });
     }
 
-    const newCategories = categories.map(cat => 
+    const newCategories = categories.map(cat =>
       cat === oldCategory ? newCategory : cat
     );
     setCategories(newCategories);
@@ -113,75 +113,64 @@ export const Statistics: React.FC = () => {
     ? accounts.filter(account => account.category === selectedCategory)
     : accounts;
 
+  const totalAccounts = accounts.length;
+  const leagueAccounts = accounts.filter(a => a.game_type === 'league' || a.game_type === 'both').length;
+  const valorantAccounts = accounts.filter(a => a.game_type === 'valorant' || a.game_type === 'both').length;
+  const categorizedAccounts = accounts.filter(a => a.category).length;
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-bl-yellow">Account Statistics</h2>
-        <div className="flex space-x-4">
-          <select
-            value={selectedCategory}
-            onChange={(e: FormSelectEvent) => setSelectedCategory(e.target.value)}
-            className="bg-bl-gray border border-bl-light-gray rounded-md px-3 py-2"
-          >
-            <option value="">All Categories</option>
-            {categories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          <button
-            onClick={() => setShowCategoryModal(true)}
-            className="btn-primary flex items-center"
-          >
-            <FaPlus className="mr-2" /> Add Category
-          </button>
+    <div className="space-y-6 p-4 max-w-2xl mx-auto">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-bl-gray border border-bl-light-gray rounded-md p-4">
+          <p className="text-sm text-bl-red flex items-center gap-2">
+            <FaUsers size={14} />
+            <span>Total Accounts</span>
+          </p>
+          <p className="text-2xl mt-2">{totalAccounts}</p>
+        </div>
+        <div className="bg-bl-gray border border-bl-light-gray rounded-md p-4">
+          <p className="text-sm text-bl-red flex items-center gap-2">
+            <FaLeaf size={14} />
+            <span>League Accounts</span>
+          </p>
+          <p className="text-2xl mt-2">{leagueAccounts}</p>
+        </div>
+        <div className="bg-bl-gray border border-bl-light-gray rounded-md p-4">
+          <p className="text-sm text-bl-red flex items-center gap-2">
+            <FaStar size={14} />
+            <span>Valorant Accounts</span>
+          </p>
+          <p className="text-2xl mt-2">{valorantAccounts}</p>
+        </div>
+        <div className="bg-bl-gray border border-bl-light-gray rounded-md p-4">
+          <p className="text-sm text-bl-red flex items-center gap-2">
+            <FaTags size={14} />
+            <span>Categorized</span>
+          </p>
+          <p className="text-2xl mt-2">{categorizedAccounts}</p>
         </div>
       </div>
 
-      {/* Category Management Modal */}
-      {showCategoryModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-bl-gray p-6 rounded-lg w-96">
-            <h3 className="text-lg font-bold mb-4">Add New Category</h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              handleAddCategory();
-            }}>
-              <input
-                type="text"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                className="w-full mb-4"
-                placeholder="Category name"
-                autoFocus
-              />
-              <div className="flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCategoryModal(false)}
-                  className="btn-danger"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary"
-                >
-                  Add
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* Categories Management */}
+      <div className="bg-bl-gray border border-bl-light-gray rounded-md p-4">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-bl-red font-medium flex items-center gap-2">
+            <FaFolder size={14} />
+            <span>Categories</span>
+          </h3>
+          <button
+            onClick={() => setShowCategoryModal(true)}
+            className="text-bl-red hover:text-red-700 transition-colors p-1"
+          >
+            <FaPlus size={14} />
+          </button>
         </div>
-      )}
-
-      {/* Categories List */}
-      <div className="mb-6 bg-bl-gray rounded-lg p-4">
-        <h3 className="text-lg font-bold mb-4">Categories</h3>
         <div className="space-y-2">
           {categories.map(category => (
-            <div key={category} className="flex items-center justify-between bg-bl-light-gray p-2 rounded">
+            <div key={category} className="flex items-center justify-between bg-bl-light-gray rounded-md p-2.5">
               {editingCategory?.old === category ? (
-                <form 
+                <form
                   onSubmit={(e) => {
                     e.preventDefault();
                     handleEditCategory(category, editingCategory.new);
@@ -192,122 +181,196 @@ export const Statistics: React.FC = () => {
                     type="text"
                     value={editingCategory.new}
                     onChange={(e) => setEditingCategory({ old: category, new: e.target.value })}
-                    className="flex-1"
+                    className="flex-1 bg-bl-gray border border-bl-light-gray rounded-md px-3 py-2
+                           focus:border-bl-red focus:ring-0 transition-colors"
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="text-bl-red hover:text-red-800"
+                    className="text-bl-red hover:text-red-700 transition-colors p-1.5 rounded hover:bg-bl-light-gray"
+                    title="Save changes"
                   >
-                    Save
+                    <FaCheck size={14} />
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditingCategory(null)}
-                    className="text-bl-red hover:text-red-800"
+                    className="text-bl-red hover:text-red-700 transition-colors p-1.5 rounded hover:bg-bl-light-gray"
+                    title="Cancel"
                   >
-                    Cancel
+                    <FaTimes size={14} />
                   </button>
                 </form>
               ) : (
                 <>
                   <span>{category}</span>
-                  <div className="flex space-x-2">
+                  <div className="flex gap-2">
                     <button
                       onClick={() => setEditingCategory({ old: category, new: category })}
-                      className="text-bl-red hover:text-red-800"
+                      className="text-bl-red hover:text-red-700 transition-colors"
                     >
-                      <FaEdit />
+                      <FaEdit size={14} />
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category)}
-                      className="text-bl-red hover:text-red-800"
+                      className="text-bl-red hover:text-red-700 transition-colors"
                     >
-                      <FaTrash />
+                      <FaTrash size={14} />
                     </button>
                   </div>
                 </>
               )}
             </div>
           ))}
+          {categories.length === 0 && (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-400">No categories yet</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Accounts List */}
-      <div className="grid gap-4">
+      {/* Account List */}
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <h3 className="text-bl-red font-medium flex items-center gap-2">
+            <FaUser size={14} />
+            <span>Accounts</span>
+          </h3>
+          <div className="relative">
+            <select
+              value={selectedCategory}
+              onChange={(e: FormSelectEvent) => setSelectedCategory(e.target.value)}
+              className="bg-bl-gray border border-bl-light-gray rounded-md pl-3 pr-8 py-2
+                      focus:border-bl-red focus:ring-0 transition-colors appearance-none cursor-pointer"
+            >
+              <option value="" className="bg-bl-gray text-white">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat} className="bg-bl-gray text-white">{cat}</option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+              <svg className="h-4 w-4 text-bl-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
         {filteredAccounts.map((account) => (
-          <div key={account.id} className="bg-bl-gray rounded-lg p-4 border border-bl-light-gray">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-bold text-lg text-white">{account.name}</h3>
-                <select
-                  value={account.category}
-                  onChange={(e) => handleSetCategory(account.id, e.target.value)}
-                  className="text-sm bg-bl-light-gray border-none"
-                >
-                  <option value="">No Category</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+          <div key={account.id} className="bg-bl-gray border border-bl-light-gray rounded-md p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-4">
+                <h3 className="font-medium">{account.name}</h3>
+                <span className="text-sm text-gray-400">{account.username}</span>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex gap-2">
                 <button
                   onClick={() => togglePasswordVisibility(account.id)}
-                  className="text-bl-red hover:text-red-800 transition-colors"
+                  className="text-bl-red hover:text-red-700 transition-colors"
                 >
-                  {showPassword[account.id] ? <FaEyeSlash /> : <FaEye />}
+                  {showPassword[account.id] ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
                 </button>
                 <button
                   onClick={() => handleDelete(account.id)}
-                  className="text-bl-red hover:text-red-800 transition-colors"
+                  className="text-bl-red hover:text-red-700 transition-colors"
                 >
-                  <FaTrash />
+                  <FaTrash size={14} />
                 </button>
               </div>
             </div>
-            
-            <div className="mt-4 grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-bl-yellow text-sm">Username</p>
-                <p className="text-xl font-bold">{account.username}</p>
+                <span className="text-gray-400">Password:</span>
+                <span className="ml-2">
+                  {showPassword[account.id] ? account.password : '••••••••'}
+                </span>
               </div>
               <div>
-                <p className="text-bl-yellow text-sm">Password</p>
-                <p className="text-xl font-bold">
-                  {showPassword[account.id] ? account.password : '••••••••'}
-                </p>
+                <span className="text-gray-400">Category:</span>
+                <select
+                  value={account.category}
+                  onChange={(e) => handleSetCategory(account.id, e.target.value)}
+                  className="ml-2 bg-bl-gray border-none focus:ring-0 cursor-pointer"
+                >
+                  <option value="" className="bg-bl-gray text-white">None</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat} className="bg-bl-gray text-white">{cat}</option>
+                  ))}
+                </select>
               </div>
               {account.email && (
                 <div className="col-span-2">
-                  <p className="text-bl-yellow text-sm">Email</p>
-                  <p className="text-xl font-bold">{account.email}</p>
+                  <span className="text-gray-400">Email:</span>
+                  <span className="ml-2">{account.email}</span>
                 </div>
               )}
               <div>
-                <p className="text-bl-yellow text-sm">Last Login</p>
-                <p className="text-xl font-bold">
-                  {account.last_login 
-                    ? new Date(account.last_login).toLocaleDateString()
-                    : 'Never'}
-                </p>
+                <span className="text-gray-400">Game:</span>
+                <span className="ml-2">
+                  {account.game_type === 'both' ? 'League & VALORANT' :
+                    account.game_type === 'league' ? 'League of Legends' : 'VALORANT'}
+                </span>
               </div>
               <div>
-                <p className="text-bl-yellow text-sm">Game</p>
-                <p className="text-xl font-bold">
-                  {account.game_type === 'both' ? 'Both' : account.game_type}
-                </p>
+                <span className="text-gray-400">Last Login:</span>
+                <span className="ml-2">
+                  {account.last_login
+                    ? new Date(account.last_login).toLocaleDateString()
+                    : 'Never'}
+                </span>
               </div>
             </div>
           </div>
         ))}
+        {accounts.length === 0 && (
+          <div className="text-center py-6 bg-bl-gray border border-bl-light-gray rounded-md">
+            <p className="text-sm text-gray-400">No accounts found</p>
+          </div>
+        )}
       </div>
 
-      {accounts.length === 0 && (
-        <div className="text-center text-gray-500 py-8 bg-bl-gray rounded-lg border border-bl-light-gray">
-          No accounts found. Add some accounts to see their statistics here.
+      {/* Category Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-bl-gray border border-bl-light-gray rounded-md p-4 w-96">
+            <h3 className="text-bl-red font-medium mb-4 flex items-center gap-2">
+              <FaFolder size={14} />
+              <span>New Category</span>
+            </h3>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleAddCategory();
+            }}>
+              <input
+                type="text"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="w-full bg-bl-gray border border-bl-light-gray rounded-md px-3 py-2
+                        focus:border-bl-red focus:ring-0 transition-colors mb-4"
+                placeholder="Category name"
+                autoFocus
+              />
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  className="text-bl-red hover:text-red-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="text-bl-red hover:text-red-700 transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
   );
-}; 
+};

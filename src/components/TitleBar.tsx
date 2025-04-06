@@ -1,15 +1,14 @@
 import { appWindow } from '@tauri-apps/api/window';
 import { invoke } from '@tauri-apps/api/tauri';
 import { FaMinus, FaTimes } from 'react-icons/fa';
-import { Settings } from '../types';
 
 export const TitleBar: React.FC = () => {
   const handleMinimize = async () => {
-    const settings = await invoke<Settings>('get_settings');
+    const settings = await invoke<{ minimizeToTray: boolean }>('get_settings');
     if (settings.minimizeToTray) {
       await appWindow.hide();
     } else {
-      await appWindow.minimize();
+      await invoke('minimize_window');
     }
   };
 
@@ -19,7 +18,7 @@ export const TitleBar: React.FC = () => {
       className="h-8 bg-bl-dark border-b border-bl-light-gray flex justify-between items-center select-none"
     >
       <div data-tauri-drag-region className="flex-1 px-4">
-        <span className="text-gray-500 text-sm">v0.1.1</span>
+        <span className="text-gray-500 text-sm">v0.1.2</span>
       </div>
       
       {/* Window controls */}

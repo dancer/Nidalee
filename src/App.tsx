@@ -5,7 +5,6 @@ import { MainSection } from './components/MainSection';
 import { AddAccount } from './components/AddAccount';
 import { Statistics } from './components/Statistics';
 import { Settings } from './components/Settings';
-import { FaDollarSign } from 'react-icons/fa6';
 import { FaGithub } from 'react-icons/fa';
 import { open } from '@tauri-apps/api/shell';
 import { invoke } from '@tauri-apps/api/tauri';
@@ -34,10 +33,6 @@ const App: React.FC = () => {
     open('https://github.com/dancer/nidalee');
   };
 
-  const openKofi = () => {
-    open('https://ko-fi.com/uoucat');
-  };
-
   const preventDrag = (e: React.DragEvent) => {
     e.preventDefault();
   };
@@ -48,10 +43,10 @@ const App: React.FC = () => {
       <div className="flex-1 p-6 overflow-auto">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2">
-            <img 
-              src="icons/icon.ico" 
-              alt="Nidalee" 
-              className="w-6 h-6 select-none" 
+            <img
+              src="icons/icon.ico"
+              alt="Nidalee"
+              className="w-6 h-6 select-none"
               onDragStart={preventDrag}
               draggable={false}
             />
@@ -64,17 +59,11 @@ const App: React.FC = () => {
             >
               <FaGithub />
             </button>
-            <button
-              onClick={openKofi}
-              className="hover:text-bl-red transition-colors flex items-center"
-            >
-              <FaDollarSign />
-            </button>
           </div>
         </div>
 
         <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
-        
+
         <div className="mt-6 bg-bl-dark p-6 rounded-lg border border-bl-gray">
           {activeTab === 'main' && <MainSection />}
           {activeTab === 'add' && <AddAccount />}

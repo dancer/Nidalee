@@ -8,7 +8,7 @@ interface TabsProps {
 
 export const Tabs: React.FC<TabsProps> = ({ activeTab, onTabChange }) => {
   const tabs: TabItem[] = [
-    { id: 'main', label: 'General' },
+    { id: 'main', label: 'Main' },
     { id: 'add', label: 'Add Account' },
     { id: 'stats', label: 'Statistics' },
     { id: 'settings', label: 'Settings' },

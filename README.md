@@ -7,6 +7,7 @@
   [![Made with Tauri](https://img.shields.io/badge/Made%20with-Tauri-red.svg)](https://tauri.app)
   [![Built with React](https://img.shields.io/badge/Built%20with-React-red.svg)](https://reactjs.org/)
   [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-red.svg)](https://www.rust-lang.org/)
+  [![Riot Games Approved](https://img.shields.io/badge/Riot%20Games-Approved-red.svg)](https://www.riotgames.com)
 
   <img src="preview.png" alt="Nidalee Preview" width="800"/>
   <p align="center"><i>A modern account manager for League of Legends and Valorant</i></p>
@@ -14,45 +15,58 @@
 
 ## 🩷 About
 
-Nidalee is a sleek account manager for League of Legends and Valorant, built with privacy and security in mind. It provides a seamless experience for managing multiple accounts and launching your favorite games.
+Nidalee is a sleek account manager for League of Legends and Valorant, built with privacy and security in mind. It provides a seamless experience for managing multiple accounts and launching your favorite games. Approved by Riot Games, ensuring compliance with their terms of service.
 
 ## 💖 Current Features
 
 💕 **Account Management**
+
 - Secure account storage with encryption
-- Easy account switching
-- Category organization
+- Automatic account switching
+- Smart game detection
+- Auto-close running games
+- Category organization with easy editing
 - Quick launch for both games
 
 💕 **System Integration**
+
 - Start with Windows
 - Minimize to tray
 - Auto-minimize on game launch
 - Custom login delay settings
+- Intelligent client detection
 
 💕 **Security**
+
 - Local data storage
 - AES-256 encryption
 - No cloud storage
 - Password protection
+- Riot Games approved
 
 💕 **User Interface**
+
 - Modern dark theme
 - Clean and intuitive design
 - Responsive layout
 - Custom titlebar
+- Enhanced dropdown menus
+- Improved category management
 
 ## 💌 Planned Features
 
 💞 **Enhanced Security**
+
 - Backup and restore
 - High Quality Data protection
 
 💞 **Advanced Features**
+
 - Data backup and restore
 - Multi-language support
 
 💞 **Quality of Life**
+
 - Custom themes
 - Keyboard shortcuts
 - Account notes
