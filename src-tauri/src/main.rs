@@ -4,7 +4,7 @@
 )]
 
 use chrono::Utc;
-use enigo::{Enigo, Key, KeyboardControllable};
+use enigo::{Enigo, Key, KeyboardControllable, MouseButton, MouseControllable};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
@@ -14,9 +14,11 @@ use std::fs::read_dir;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::api::path;
 use tauri::SystemTrayMenuItem;
 use tauri::{CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu};
@@ -51,7 +53,7 @@ pub struct Settings {
     pub minimize_to_tray: bool,
     pub minimize_on_game_launch: bool,
     pub login_delay: u32,
-    pub window_pos: Option<(i32, i32)>,
+    pub preferred_monitor: Option<usize>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -62,6 +64,8 @@ struct Categories {
 struct AppState {
     accounts: Mutex<HashMap<String, Account>>,
     settings: Mutex<Settings>,
+    last_move_time: AtomicU64,
+    last_monitor: Mutex<Option<usize>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -76,7 +80,7 @@ async fn save_account(account: Account, state: tauri::State<'_, AppState>) -> Re
     accounts.insert(account.id.clone(), account);
 
     let accounts_path = get_app_data_dir()?.join("accounts.json");
-    let accounts_json = serde_json::to_string(&*accounts).map_err(|e| e.to_string())?;
+    let accounts_json = serde_json::to_string_pretty(&*accounts).map_err(|e| e.to_string())?;
     fs::write(accounts_path, accounts_json).map_err(|e| e.to_string())?;
 
     Ok(())
@@ -119,7 +123,7 @@ async fn save_settings(
     *current_settings = settings;
 
     let settings_path = get_app_data_dir()?.join("settings.json");
-    let settings_json = serde_json::to_string(&*current_settings).map_err(|e| {
+    let settings_json = serde_json::to_string_pretty(&*current_settings).map_err(|e| {
         println!("Failed to serialize settings: {}", e);
         e.to_string()
     })?;
@@ -275,11 +279,9 @@ async fn launch_game(
 
                 thread::sleep(Duration::from_secs(1));
 
-                for _ in 0..3 {
-                    enigo.key_click(Key::Tab);
-                    thread::sleep(Duration::from_millis(300));
-                }
-
+                enigo.mouse_move_to(400, 370);
+                thread::sleep(Duration::from_millis(100));
+                enigo.mouse_click(MouseButton::Left);
                 thread::sleep(Duration::from_millis(500));
             }
         }
@@ -536,7 +538,7 @@ async fn save_categories(
 ) -> Result<(), String> {
     let categories_path = get_app_data_dir()?.join("categories.json");
     let categories_json =
-        serde_json::to_string(&Categories { categories }).map_err(|e| e.to_string())?;
+        serde_json::to_string_pretty(&Categories { categories }).map_err(|e| e.to_string())?;
     fs::write(categories_path, categories_json).map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -734,12 +736,12 @@ fn main() {
             minimize_to_tray: false,
             minimize_on_game_launch: false,
             login_delay: 5,
-            window_pos: None,
+            preferred_monitor: None,
         });
 
         if settings.riot_client_path.is_empty() && !riot_client_path.is_empty() {
             settings.riot_client_path = riot_client_path;
-            if let Ok(json) = serde_json::to_string(&settings) {
+            if let Ok(json) = serde_json::to_string_pretty(&settings) {
                 let _ = fs::write(&_settings_path, json);
             }
         }
@@ -753,9 +755,9 @@ fn main() {
             minimize_to_tray: false,
             minimize_on_game_launch: false,
             login_delay: 5,
-            window_pos: None,
+            preferred_monitor: None,
         };
-        if let Ok(json) = serde_json::to_string(&settings) {
+        if let Ok(json) = serde_json::to_string_pretty(&settings) {
             let _ = fs::write(&_settings_path, json);
         }
         settings
@@ -770,6 +772,8 @@ fn main() {
     let app_state = AppState {
         accounts: Mutex::new(accounts),
         settings: Mutex::new(settings),
+        last_move_time: AtomicU64::new(0),
+        last_monitor: Mutex::new(None),
     };
 
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
@@ -835,18 +839,11 @@ fn main() {
             if args.contains(&"--start-minimized".to_string()) {
                 window.hide().unwrap();
             } else {
-                let target_monitor = if let Some((x, y)) = settings.window_pos {
-                    let monitors = window.available_monitors().unwrap();
+                let monitors = window.available_monitors().unwrap();
+                let target_monitor = if let Some(preferred_idx) = settings.preferred_monitor {
                     monitors
-                        .into_iter()
-                        .find(|monitor| {
-                            let position = monitor.position();
-                            let size = monitor.size();
-                            x >= position.x
-                                && x < position.x + size.width as i32
-                                && y >= position.y
-                                && y < position.y + size.height as i32
-                        })
+                        .get(preferred_idx)
+                        .cloned()
                         .or_else(|| window.current_monitor().unwrap())
                 } else {
                     window.current_monitor().unwrap()
@@ -876,14 +873,61 @@ fn main() {
         .on_window_event(|event| {
             if let tauri::WindowEvent::Moved(position) = event.event() {
                 let window = event.window();
-                let state = window.state::<AppState>();
-                let mut settings = state.settings.lock().unwrap();
-                settings.window_pos = Some((position.x, position.y));
+                if let Ok(monitors) = window.available_monitors() {
+                    let current_monitor_idx = monitors.into_iter().enumerate().find(|(_, monitor)| {
+                        let pos = monitor.position();
+                        let size = monitor.size();
+                        position.x >= pos.x
+                            && position.x < pos.x + size.width as i32
+                            && position.y >= pos.y
+                            && position.y < pos.y + size.height as i32
+                    }).map(|(idx, _)| idx);
 
-                if let Ok(settings_json) = serde_json::to_string(&*settings) {
-                    let app_data_dir = path::app_data_dir(&tauri::Config::default()).unwrap();
-                    let settings_path = app_data_dir.join("settings.json");
-                    let _ = fs::write(settings_path, settings_json);
+                    if let Some(new_monitor_idx) = current_monitor_idx {
+                        let state = window.state::<AppState>();
+                        let settings = state.settings.lock().unwrap();
+                        
+                        if settings.preferred_monitor != Some(new_monitor_idx) {
+                            drop(settings);
+                            
+                            let current_time = SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap()
+                                .as_millis() as u64;
+                            state.last_move_time.store(current_time, Ordering::SeqCst);
+                            
+                            let mut last_monitor = state.last_monitor.lock().unwrap();
+                            *last_monitor = Some(new_monitor_idx);
+                            drop(last_monitor);
+
+                            let window_handle = window.clone();
+                            
+                            std::thread::spawn(move || {
+                                std::thread::sleep(std::time::Duration::from_secs(2));
+                                
+                                let state = window_handle.state::<AppState>();
+                                let last_move = state.last_move_time.load(Ordering::SeqCst);
+                                
+                                if current_time == last_move {
+                                    let mut settings = state.settings.lock().unwrap();
+                                    let last_monitor = state.last_monitor.lock().unwrap();
+                                    
+                                    if let Some(monitor_idx) = *last_monitor {
+                                        if settings.preferred_monitor != Some(monitor_idx) {
+                                            settings.preferred_monitor = Some(monitor_idx);
+                                            
+                                            if let Ok(settings_json) = serde_json::to_string_pretty(&*settings) {
+                                                let app_data_dir = path::app_data_dir(&tauri::Config::default()).unwrap();
+                                                let settings_path = app_data_dir.join("Nidalee").join("settings.json");
+                                                let _ = fs::write(settings_path, settings_json);
+                                                println!("Window position saved after confirmed monitor change");
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
                 }
             }
         })

@@ -186,7 +186,7 @@ export const AddAccount: React.FC = () => {
                 }}
                 className="w-full bg-bl-gray border border-bl-light-gray rounded-md pl-10 pr-3 py-2.5 text-base
                          focus:border-bl-red focus:ring-0 transition-colors"
-                placeholder="Account email (if different from username)"
+                placeholder="Account email"
                 autoComplete="off"
               />
             </div>

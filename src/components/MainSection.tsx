@@ -273,22 +273,25 @@ export const MainSection: React.FC = () => {
       </div>
 
       {/* Info Card */}
-      <div className="bg-bl-gray rounded-md p-4 border border-bl-light-gray mt-6">
-        <h3 className="text-bl-red font-medium mb-2 flex items-center gap-2">
-          <FaGamepad size={14} />
+      <div className="bg-bl-gray rounded-md p-3 border border-bl-light-gray mt-4">
+        <h3 className="text-bl-red font-medium mb-1.5 flex items-center gap-2 text-sm">
+          <FaGamepad size={12} />
           <span>Quick Launch</span>
         </h3>
-        <p className="text-sm text-gray-400">
+        <p className="text-xs text-gray-400">
           Select your account and game to launch. If the login process fails, try adjusting the login delay in Settings.
           A longer delay gives the client more time to load before attempting to log in.
         </p>
-        <div className="bg-[#1a1111] border border-bl-red rounded p-2 mt-3">
-          <p className="text-bl-red text-xs flex items-center gap-2">
-            <svg className="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-[#1a1111] border border-bl-red rounded p-1.5 mt-2">
+          <div className="text-bl-red text-xs flex gap-1.5">
+            <svg className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <span>Do not switch windows during login - credentials may be typed in wrong window</span>
-          </p>
+            <div>
+              <div>Do not switch windows during login - credentials may be typed in wrong window</div>
+              <div className="mt-0.5">Do not move your mouse during login - this may interfere with the login process</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

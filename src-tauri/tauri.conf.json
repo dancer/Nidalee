@@ -70,11 +70,11 @@
         "resizable": true,
         "title": "Nidalee",
         "width": 785,
-        "height": 785,
+        "height": 790,
         "minWidth": 560,
-        "minHeight": 785,
+        "minHeight": 790,
         "maxWidth": 785,
-        "maxHeight": 785,
+        "maxHeight": 790,
         "decorations": false,
         "center": true
       }
