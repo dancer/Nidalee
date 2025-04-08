@@ -13,7 +13,7 @@ use std::fs::create_dir_all;
 use std::fs::read_dir;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::thread;
@@ -24,9 +24,9 @@ use tauri::SystemTrayMenuItem;
 use tauri::{CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu};
 use windows::core::PCSTR;
 use windows::core::PCWSTR;
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::System::Threading::{CreateMutexW, OpenMutexW, MUTEX_ALL_ACCESS};
-use windows::Win32::UI::WindowsAndMessaging::FindWindowA;
+use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, GetWindowRect, BringWindowToTop, SetForegroundWindow};
 use winreg::enums::*;
 use winreg::RegKey;
 
@@ -221,20 +221,6 @@ async fn launch_game(
 
     println!("Launching Riot Client from: {}", riot_client_path);
 
-    let fresh_launch = unsafe {
-        let window = FindWindowA(
-            PCSTR::from_raw("Chrome_WidgetWin_1\0".as_ptr()),
-            PCSTR::from_raw("Riot Client\0".as_ptr()),
-        );
-
-        let window2 = FindWindowA(
-            PCSTR::from_raw("RCLIENT\0".as_ptr()),
-            PCSTR::from_raw("Riot Client\0".as_ptr()),
-        );
-
-        window == HWND(0) && window2 == HWND(0)
-    };
-
     #[cfg(target_os = "windows")]
     let _command = Command::new(&riot_client_path)
         .creation_flags(0x08000000)
@@ -252,59 +238,59 @@ async fn launch_game(
     println!("Starting login sequence");
     let mut enigo = Enigo::new();
 
-    if !fresh_launch {
-        unsafe {
-            let window = FindWindowA(
-                PCSTR::from_raw("Chrome_WidgetWin_1\0".as_ptr()),
-                PCSTR::from_raw("Riot Client\0".as_ptr()),
-            );
+    thread::sleep(Duration::from_millis(500));
 
-            let window2 = FindWindowA(
-                PCSTR::from_raw("RCLIENT\0".as_ptr()),
-                PCSTR::from_raw("Riot Client\0".as_ptr()),
-            );
+    unsafe {
+        let window = FindWindowA(
+            PCSTR::from_raw("Chrome_WidgetWin_1\0".as_ptr()),
+            PCSTR::from_raw("Riot Client\0".as_ptr()),
+        );
 
-            if window != HWND(0) || window2 != HWND(0) {
-                use windows::Win32::UI::WindowsAndMessaging::{
-                    BringWindowToTop, SetForegroundWindow,
-                };
+        let window2 = FindWindowA(
+            PCSTR::from_raw("RCLIENT\0".as_ptr()),
+            PCSTR::from_raw("Riot Client\0".as_ptr()),
+        );
 
-                if window != HWND(0) {
-                    BringWindowToTop(window);
-                    SetForegroundWindow(window);
-                } else {
-                    BringWindowToTop(window2);
-                    SetForegroundWindow(window2);
-                }
+        let target_window = if window != HWND(0) { window } else { window2 };
 
-                thread::sleep(Duration::from_secs(1));
+        if target_window != HWND(0) {
+            let mut rect = RECT::default();
+            GetWindowRect(target_window, &mut rect);
+            
+            let window_width = rect.right - rect.left;
+            let window_height = rect.bottom - rect.top;
+            let target_x = rect.left + (window_width as f32 * 0.15) as i32;
+            let target_y = rect.top + (window_height as f32 * 0.30) as i32;
 
-                enigo.mouse_move_to(400, 370);
-                thread::sleep(Duration::from_millis(100));
-                enigo.mouse_click(MouseButton::Left);
-                thread::sleep(Duration::from_millis(500));
+            BringWindowToTop(target_window);
+            SetForegroundWindow(target_window);
+
+            thread::sleep(Duration::from_millis(500));
+
+            enigo.mouse_move_to(target_x, target_y);
+            thread::sleep(Duration::from_millis(50));
+            enigo.mouse_click(MouseButton::Left);
+            thread::sleep(Duration::from_millis(200));
+
+            for c in account.username.chars() {
+                enigo.key_sequence(&c.to_string());
+                thread::sleep(Duration::from_millis(5));
             }
+            thread::sleep(Duration::from_millis(100));
+
+            enigo.key_click(Key::Tab);
+            thread::sleep(Duration::from_millis(100));
+
+            for c in account.password.chars() {
+                enigo.key_sequence(&c.to_string());
+                thread::sleep(Duration::from_millis(5));
+            }
+            thread::sleep(Duration::from_millis(100));
+
+            enigo.key_click(Key::Return);
+            thread::sleep(Duration::from_secs(1));
         }
     }
-
-    for c in account.username.chars() {
-        enigo.key_sequence(&c.to_string());
-        thread::sleep(Duration::from_millis(10));
-    }
-    thread::sleep(Duration::from_millis(300));
-
-    enigo.key_click(Key::Tab);
-    thread::sleep(Duration::from_millis(300));
-
-    for c in account.password.chars() {
-        enigo.key_sequence(&c.to_string());
-        thread::sleep(Duration::from_millis(10));
-    }
-    thread::sleep(Duration::from_millis(300));
-
-    enigo.key_click(Key::Return);
-
-    thread::sleep(Duration::from_secs(2));
 
     println!("Launching game: {}", selected_game);
     let launch_args = match selected_game.as_str() {
@@ -315,8 +301,8 @@ async fn launch_game(
 
     #[cfg(target_os = "windows")]
     Command::new(&riot_client_path)
-        .args(launch_args.split_whitespace())
         .creation_flags(0x08000000)
+        .args(launch_args.split_whitespace())
         .spawn()
         .map_err(|e| {
             println!("Failed to launch game: {}", e);
@@ -446,6 +432,7 @@ fn find_riot_client_from_process() -> Option<String> {
     #[cfg(windows)]
     {
         let output = Command::new("wmic")
+            .creation_flags(0x08000000)
             .args([
                 "process",
                 "where",
@@ -595,6 +582,7 @@ async fn minimize_window(
 #[tauri::command]
 async fn check_game_status() -> Result<GameStatus, String> {
     let output = Command::new("tasklist")
+        .creation_flags(0x08000000)
         .output()
         .map_err(|e| e.to_string())?;
 
@@ -635,24 +623,31 @@ async fn force_close_game(game_type: String) -> Result<(), String> {
 
     for process in &processes {
         println!("Closing process: {}", process);
-        let _ = Command::new("taskkill").args(["/IM", process]).output();
-
-        thread::sleep(Duration::from_millis(500));
+        let _ = Command::new("taskkill")
+            .creation_flags(0x08000000)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .args(["/IM", process])
+            .output();
+        thread::sleep(Duration::from_millis(100));
     }
 
     for process in &processes {
         println!("Force closing process: {}", process);
         let _ = Command::new("taskkill")
+            .creation_flags(0x08000000)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .args(["/F", "/IM", process])
             .output();
-
-        thread::sleep(Duration::from_millis(200));
+        thread::sleep(Duration::from_millis(50));
     }
 
     println!("Waiting for processes to terminate...");
-    thread::sleep(Duration::from_secs(3));
+    thread::sleep(Duration::from_secs(1));
 
     let output = Command::new("tasklist")
+        .creation_flags(0x08000000)
         .output()
         .map_err(|e| e.to_string())?;
 
@@ -684,8 +679,7 @@ fn main() {
 
             if window != HWND(0) {
                 use windows::Win32::UI::WindowsAndMessaging::{
-                    BringWindowToTop, IsIconic, SetForegroundWindow, ShowWindow, SW_HIDE,
-                    SW_MINIMIZE, SW_RESTORE, SW_SHOW,
+                    IsIconic, ShowWindow, SW_HIDE, SW_MINIMIZE, SW_RESTORE, SW_SHOW,
                 };
 
                 if IsIconic(window).as_bool() {
@@ -903,6 +897,13 @@ fn main() {
                             let window_handle = window.clone();
                             
                             std::thread::spawn(move || {
+                                #[cfg(target_os = "windows")]
+                                let _ = Command::new("cmd")
+                                    .creation_flags(0x08000000)
+                                    .stdout(Stdio::null())
+                                    .stderr(Stdio::null())
+                                    .spawn();
+
                                 std::thread::sleep(std::time::Duration::from_secs(2));
                                 
                                 let state = window_handle.state::<AppState>();
