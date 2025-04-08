@@ -7,7 +7,7 @@
   [![Made with Tauri](https://img.shields.io/badge/Made%20with-Tauri-red.svg)](https://tauri.app)
   [![Built with React](https://img.shields.io/badge/Built%20with-React-red.svg)](https://reactjs.org/)
   [![Built with Rust](https://img.shields.io/badge/Built%20with-Rust-red.svg)](https://www.rust-lang.org/)
-  [![Riot Games Approved](https://img.shields.io/badge/Riot%20Games-Approved-red.svg)](https://www.riotgames.com)
+  [![Riot Games TOS](https://img.shields.io/badge/Riot%20Games-TOS-red.svg)](https://www.riotgames.com)
 
   <img src="preview.png" alt="Nidalee Preview" width="800"/>
   <p align="center"><i>A modern account manager for League of Legends and Valorant</i></p>
@@ -15,7 +15,7 @@
 
 ## 🩷 About
 
-Nidalee is a sleek account manager for League of Legends and Valorant, built with privacy and security in mind. It provides a seamless experience for managing multiple accounts and launching your favorite games. Approved by Riot Games, ensuring compliance with their terms of service.
+Nidalee is a sleek account manager for League of Legends and Valorant, built with privacy and security in mind. It provides a seamless experience for managing multiple accounts and launching your favorite games.We follow Riot Games, ensuring compliance with their terms of service.
 
 ## 💖 Current Features
 
@@ -41,7 +41,7 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 - Local data storage
 - No cloud storage
 - Password protection
-- Riot Games approved
+- Riot Games TOS
 
 💕 **User Interface**
 

@@ -25,7 +25,7 @@ A major update focusing on automatic account switching and improved user experie
 - Smarter client detection
 - Optimized window management
 
-### ❤️ Riot Games Approved
+### ❤️ Riot Games TOS
 
 - Official compliance with Riot Games TOS
 - Safe and secure account management
