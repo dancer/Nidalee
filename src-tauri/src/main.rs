@@ -26,7 +26,7 @@ use windows::core::PCSTR;
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::System::Threading::{CreateMutexW, OpenMutexW, MUTEX_ALL_ACCESS};
-use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, GetWindowRect, BringWindowToTop, SetForegroundWindow};
+use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, GetWindowRect, BringWindowToTop, SetForegroundWindow, GetWindowTextA};
 use winreg::enums::*;
 use winreg::RegKey;
 
@@ -181,41 +181,40 @@ async fn launch_game(
     account: Account,
     selected_game: String,
 ) -> Result<(), String> {
-    let mut settings = state.settings.lock().unwrap();
-    let login_delay = settings.login_delay.clamp(2, 30) as u64;
+    // Get values from settings and drop the lock immediately
+    let (riot_client_path, login_delay, minimize_on_launch) = {
+        let settings = state.settings.lock().unwrap();
+        (
+            settings.riot_client_path.clone(),
+            settings.login_delay.clamp(2, 30) as u64,
+            settings.minimize_on_game_launch,
+        )
+    };
 
-    if settings.riot_client_path.is_empty() {
-        println!("Riot Client path not set, searching automatically...");
-        if let Some(path) = find_riot_client_path() {
-            println!("Found Riot Client at: {}", path);
-            settings.riot_client_path = path;
+    // First check if the game is already running
+    let game_status = check_game_status().await?;
+    if (selected_game == "league" && game_status.league_running) 
+        || (selected_game == "valorant" && game_status.valorant_running) {
+        return Err("Game is already running".to_string());
+    }
 
+    // Verify and update Riot Client path if needed
+    if riot_client_path.is_empty() || !verify_riot_client_path(&riot_client_path) {
+        let new_path = find_riot_client_path()
+            .ok_or("Could not find Riot Client. Please set the path in Settings.")?;
+        
+        // Update settings with new path
+        {
+            let mut settings = state.settings.lock().unwrap();
+            settings.riot_client_path = new_path.clone();
             let settings_path = get_app_data_dir()?.join("settings.json");
             if let Ok(json) = serde_json::to_string(&*settings) {
                 fs::write(settings_path, json).map_err(|e| e.to_string())?;
             }
-        } else {
-            return Err("Could not find Riot Client. Please set the path in Settings.".to_string());
         }
     }
 
-    let riot_client_path = settings.riot_client_path.clone();
-    if !verify_riot_client_path(&riot_client_path) {
-        println!("Invalid Riot Client path, searching for new path...");
-        if let Some(path) = find_riot_client_path() {
-            println!("Found new Riot Client path: {}", path);
-            settings.riot_client_path = path;
-
-            let settings_path = get_app_data_dir()?.join("settings.json");
-            if let Ok(json) = serde_json::to_string(&*settings) {
-                fs::write(settings_path, json).map_err(|e| e.to_string())?;
-            }
-        } else {
-            return Err("Could not find Riot Client. Please set the path in Settings.".to_string());
-        }
-    }
-
-    if settings.minimize_on_game_launch {
+    if minimize_on_launch {
         let _ = window.hide();
     }
 
@@ -230,7 +229,85 @@ async fn launch_game(
             e.to_string()
         })?;
 
+    // Wait for Riot Client and check for updates
     wait_for_riot_client()?;
+    
+    // Function to check for the update window
+    fn is_updating() -> bool {
+        unsafe {
+            // Check for Riot Client update window
+            let riot_update_window = FindWindowA(
+                PCSTR::from_raw("Chrome_WidgetWin_1\0".as_ptr()),
+                PCSTR::null(),
+            );
+            
+            // Check for VALORANT update window
+            let valorant_update_window = FindWindowA(
+                PCSTR::from_raw("VALORANT  \0".as_ptr()),
+                PCSTR::null(),
+            );
+
+            // Check for League update window
+            let league_update_window = FindWindowA(
+                PCSTR::from_raw("RiotClientMainWindow\0".as_ptr()),
+                PCSTR::null(),
+            );
+
+            let mut is_updating = false;
+            let mut text = [0u8; 256];
+
+            // Check Riot Client window
+            if riot_update_window != HWND(0) {
+                GetWindowTextA(riot_update_window, &mut text);
+                let window_text = String::from_utf8_lossy(&text).to_string();
+                is_updating |= window_text.contains("Update") || 
+                              window_text.contains("Installing") ||
+                              window_text.contains("Updating");
+            }
+
+            // Check VALORANT window
+            if valorant_update_window != HWND(0) {
+                GetWindowTextA(valorant_update_window, &mut text);
+                let window_text = String::from_utf8_lossy(&text).to_string();
+                is_updating |= window_text.contains("Update") || 
+                              window_text.contains("Installing") ||
+                              window_text.contains("Updating");
+            }
+
+            // Check League window
+            if league_update_window != HWND(0) {
+                GetWindowTextA(league_update_window, &mut text);
+                let window_text = String::from_utf8_lossy(&text).to_string();
+                is_updating |= window_text.contains("Update") || 
+                              window_text.contains("Installing") ||
+                              window_text.contains("Updating");
+            }
+
+            is_updating
+        }
+    }
+
+    // Wait for any updates to complete
+    let mut update_check_attempts = 0;
+    while update_check_attempts < 180 { // Wait up to 3 minutes for updates
+        if is_updating() {
+            println!("Game update in progress, waiting... (attempt {}/180)", update_check_attempts + 1);
+            thread::sleep(Duration::from_secs(1));
+            update_check_attempts += 1;
+        } else {
+            // Check one more time after a short delay to ensure no update is starting
+            thread::sleep(Duration::from_millis(500));
+            if !is_updating() {
+                break;
+            }
+        }
+    }
+
+    if update_check_attempts >= 180 {
+        return Err("Game update is taking too long. Please try again later.".to_string());
+    }
+
+    println!("No updates detected or updates completed. Proceeding with login...");
 
     println!("Waiting {} seconds for client to load...", login_delay);
     thread::sleep(Duration::from_secs(login_delay));
@@ -309,8 +386,30 @@ async fn launch_game(
             e.to_string()
         })?;
 
-    println!("Login sequence completed");
+    // Verify game launch
+    let mut launch_check_attempts = 0;
+    while launch_check_attempts < 30 { // Wait up to 30 seconds for game to launch
+        let current_status = check_game_status().await?;
+        let game_running = match selected_game.as_str() {
+            "valorant" => current_status.valorant_running,
+            "league" => current_status.league_running,
+            _ => false,
+        };
 
+        if game_running {
+            println!("Game launched successfully");
+            break;
+        }
+
+        thread::sleep(Duration::from_secs(1));
+        launch_check_attempts += 1;
+    }
+
+    if launch_check_attempts >= 30 {
+        return Err("Game failed to launch after 30 seconds. Please try again.".to_string());
+    }
+
+    // Update last login time
     let mut accounts = state.accounts.lock().unwrap();
     if let Some(acc) = accounts.get_mut(&account.id) {
         acc.last_login = Some(Utc::now().to_rfc3339());
