@@ -26,7 +26,7 @@ use windows::core::PCSTR;
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::{HWND, RECT};
 use windows::Win32::System::Threading::{CreateMutexW, OpenMutexW, MUTEX_ALL_ACCESS};
-use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, GetWindowRect, BringWindowToTop, SetForegroundWindow};
+use windows::Win32::UI::WindowsAndMessaging::{FindWindowA, GetWindowRect, BringWindowToTop, SetForegroundWindow, GetWindowTextA};
 use winreg::enums::*;
 use winreg::RegKey;
 
@@ -181,41 +181,36 @@ async fn launch_game(
     account: Account,
     selected_game: String,
 ) -> Result<(), String> {
-    let mut settings = state.settings.lock().unwrap();
-    let login_delay = settings.login_delay.clamp(2, 30) as u64;
+    let (riot_client_path, login_delay, minimize_on_launch) = {
+        let settings = state.settings.lock().unwrap();
+        (
+            settings.riot_client_path.clone(),
+            settings.login_delay.clamp(2, 30) as u64,
+            settings.minimize_on_game_launch,
+        )
+    };
 
-    if settings.riot_client_path.is_empty() {
-        println!("Riot Client path not set, searching automatically...");
-        if let Some(path) = find_riot_client_path() {
-            println!("Found Riot Client at: {}", path);
-            settings.riot_client_path = path;
+    let game_status = check_game_status().await?;
+    if (selected_game == "league" && game_status.league_running) 
+        || (selected_game == "valorant" && game_status.valorant_running) {
+        return Err("Game is already running".to_string());
+    }
 
+    if riot_client_path.is_empty() || !verify_riot_client_path(&riot_client_path) {
+        let new_path = find_riot_client_path()
+            .ok_or("Could not find Riot Client. Please set the path in Settings.")?;
+        
+        {
+            let mut settings = state.settings.lock().unwrap();
+            settings.riot_client_path = new_path.clone();
             let settings_path = get_app_data_dir()?.join("settings.json");
             if let Ok(json) = serde_json::to_string(&*settings) {
                 fs::write(settings_path, json).map_err(|e| e.to_string())?;
             }
-        } else {
-            return Err("Could not find Riot Client. Please set the path in Settings.".to_string());
         }
     }
 
-    let riot_client_path = settings.riot_client_path.clone();
-    if !verify_riot_client_path(&riot_client_path) {
-        println!("Invalid Riot Client path, searching for new path...");
-        if let Some(path) = find_riot_client_path() {
-            println!("Found new Riot Client path: {}", path);
-            settings.riot_client_path = path;
-
-            let settings_path = get_app_data_dir()?.join("settings.json");
-            if let Ok(json) = serde_json::to_string(&*settings) {
-                fs::write(settings_path, json).map_err(|e| e.to_string())?;
-            }
-        } else {
-            return Err("Could not find Riot Client. Please set the path in Settings.".to_string());
-        }
-    }
-
-    if settings.minimize_on_game_launch {
+    if minimize_on_launch {
         let _ = window.hide();
     }
 
@@ -231,6 +226,74 @@ async fn launch_game(
         })?;
 
     wait_for_riot_client()?;
+    
+    fn is_updating() -> bool {
+        unsafe {
+            let riot_update_window = FindWindowA(
+                PCSTR::from_raw("Chrome_WidgetWin_1\0".as_ptr()),
+                PCSTR::null(),
+            );
+            
+            let valorant_update_window = FindWindowA(
+                PCSTR::from_raw("VALORANT  \0".as_ptr()),
+                PCSTR::null(),
+            );
+
+            let league_update_window = FindWindowA(
+                PCSTR::from_raw("RiotClientMainWindow\0".as_ptr()),
+                PCSTR::null(),
+            );
+
+            let mut is_updating = false;
+            let mut text = [0u8; 256];
+
+            if riot_update_window != HWND(0) {
+                GetWindowTextA(riot_update_window, &mut text);
+                let window_text = String::from_utf8_lossy(&text).to_string();
+                is_updating |= window_text.contains("Update") || 
+                              window_text.contains("Installing") ||
+                              window_text.contains("Updating");
+            }
+
+            if valorant_update_window != HWND(0) {
+                GetWindowTextA(valorant_update_window, &mut text);
+                let window_text = String::from_utf8_lossy(&text).to_string();
+                is_updating |= window_text.contains("Update") || 
+                              window_text.contains("Installing") ||
+                              window_text.contains("Updating");
+            }
+
+            if league_update_window != HWND(0) {
+                GetWindowTextA(league_update_window, &mut text);
+                let window_text = String::from_utf8_lossy(&text).to_string();
+                is_updating |= window_text.contains("Update") || 
+                              window_text.contains("Installing") ||
+                              window_text.contains("Updating");
+            }
+
+            is_updating
+        }
+    }
+
+    let mut update_check_attempts = 0;
+    while update_check_attempts < 180 {
+        if is_updating() {
+            println!("Game update in progress, waiting... (attempt {}/180)", update_check_attempts + 1);
+            thread::sleep(Duration::from_secs(1));
+            update_check_attempts += 1;
+        } else {
+            thread::sleep(Duration::from_millis(500));
+            if !is_updating() {
+                break;
+            }
+        }
+    }
+
+    if update_check_attempts >= 180 {
+        return Err("Game update is taking too long. Please try again later.".to_string());
+    }
+
+    println!("No updates detected or updates completed. Proceeding with login...");
 
     println!("Waiting {} seconds for client to load...", login_delay);
     thread::sleep(Duration::from_secs(login_delay));
@@ -292,6 +355,9 @@ async fn launch_game(
         }
     }
 
+    println!("Login complete, waiting for client to be ready...");
+    thread::sleep(Duration::from_millis(1500));
+
     println!("Launching game: {}", selected_game);
     let launch_args = match selected_game.as_str() {
         "valorant" => "--launch-product=valorant --launch-patchline=live",
@@ -299,28 +365,63 @@ async fn launch_game(
         _ => return Err("Invalid game type".to_string()),
     };
 
-    #[cfg(target_os = "windows")]
-    Command::new(&riot_client_path)
-        .creation_flags(0x08000000)
-        .args(launch_args.split_whitespace())
-        .spawn()
-        .map_err(|e| {
-            println!("Failed to launch game: {}", e);
-            e.to_string()
-        })?;
+    let max_launch_attempts = 5;
+    let mut current_attempt = 0;
 
-    println!("Login sequence completed");
+    while current_attempt < max_launch_attempts {
+        current_attempt += 1;
+        println!("Attempting to launch game (attempt {}/{})", current_attempt, max_launch_attempts);
 
-    let mut accounts = state.accounts.lock().unwrap();
-    if let Some(acc) = accounts.get_mut(&account.id) {
-        acc.last_login = Some(Utc::now().to_rfc3339());
+        #[cfg(target_os = "windows")]
+        Command::new(&riot_client_path)
+            .creation_flags(0x08000000)
+            .args(launch_args.split_whitespace())
+            .spawn()
+            .map_err(|e| {
+                println!("Failed to launch game: {}", e);
+                e.to_string()
+            })?;
 
-        let accounts_path = get_app_data_dir()?.join("accounts.json");
-        let accounts_json = serde_json::to_string(&*accounts).map_err(|e| e.to_string())?;
-        fs::write(accounts_path, accounts_json).map_err(|e| e.to_string())?;
+        let mut check_attempts = 0;
+        let max_checks = 4;
+
+        while check_attempts < max_checks {
+            thread::sleep(Duration::from_secs(2));
+            check_attempts += 1;
+            
+            let current_status = check_game_status().await?;
+            let game_running = match selected_game.as_str() {
+                "valorant" => current_status.valorant_running,
+                "league" => current_status.league_running,
+                _ => false,
+            };
+
+            if game_running {
+                println!("Game launched successfully on attempt {}", current_attempt);
+                
+                let mut accounts = state.accounts.lock().unwrap();
+                if let Some(acc) = accounts.get_mut(&account.id) {
+                    acc.last_login = Some(Utc::now().to_rfc3339());
+                    let accounts_path = get_app_data_dir()?.join("accounts.json");
+                    let accounts_json = serde_json::to_string(&*accounts).map_err(|e| e.to_string())?;
+                    fs::write(accounts_path, accounts_json).map_err(|e| e.to_string())?;
+                }
+                
+                return Ok(());
+            }
+
+            println!("Game not detected yet, checking again in 2 seconds... (check {}/{})", check_attempts, max_checks);
+        }
+
+        println!("Game launch attempt {} failed, retrying...", current_attempt);
+        
+        if current_attempt < max_launch_attempts {
+            let _ = force_close_game(selected_game.clone()).await;
+            thread::sleep(Duration::from_secs(1));
+        }
     }
 
-    Ok(())
+    Err(format!("Failed to launch {} after {} attempts. Please try again or launch the game manually.", selected_game, max_launch_attempts))
 }
 
 fn get_windows_drives() -> Vec<String> {
