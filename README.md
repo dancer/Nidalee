@@ -60,23 +60,49 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 
 ## 💌 Planned Features
 
+💞 **Account Management**
+
+- Online account synchronization
+- Cloud backup and restore
+- Account sharing capabilities
+- Account statistics and history
+- Custom account tags and notes
+- Advanced search and filtering
+
+💞 **Application Updates**
+
+- Automatic updates
+- Update notifications
+- Changelog viewer
+- Beta features opt-in
+- Custom update schedule
+
 💞 **Enhanced Security**
 
-- Backup and restore
-- High Quality Data protection
-
-💞 **Advanced Features**
-
-- Data backup and restore
-- Multi-language support
+- Two-factor authentication
+- Encrypted cloud storage
+- Secure account sharing
+- Advanced encryption options
+- Backup encryption
 
 💞 **Quality of Life**
 
-- Custom themes
+- Custom themes and layouts
 - Keyboard shortcuts
-- Account notes
-- Search functionality
-- Unban Timer
+- Account notes and reminders
+- Advanced search functionality
+- Unban timer and notifications
+- Multi-language support
+- Game statistics integration
+- Custom launch parameters
+
+💞 **Community Features**
+
+- Account sharing with friends
+- Community themes
+- Feature voting
+- Bug reporting system
+- Community suggestions
 
 ## 💓 Installation
 
