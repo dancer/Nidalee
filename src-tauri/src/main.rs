@@ -355,6 +355,9 @@ async fn launch_game(
         }
     }
 
+    println!("Login complete, waiting for client to be ready...");
+    thread::sleep(Duration::from_millis(1500));
+
     println!("Launching game: {}", selected_game);
     let launch_args = match selected_game.as_str() {
         "valorant" => "--launch-product=valorant --launch-patchline=live",
@@ -362,7 +365,7 @@ async fn launch_game(
         _ => return Err("Invalid game type".to_string()),
     };
 
-    let max_launch_attempts = 3;
+    let max_launch_attempts = 5;
     let mut current_attempt = 0;
 
     while current_attempt < max_launch_attempts {
@@ -380,10 +383,10 @@ async fn launch_game(
             })?;
 
         let mut check_attempts = 0;
-        let max_checks = 12;
+        let max_checks = 4;
 
         while check_attempts < max_checks {
-            thread::sleep(Duration::from_secs(5));
+            thread::sleep(Duration::from_secs(2));
             check_attempts += 1;
             
             let current_status = check_game_status().await?;
@@ -407,14 +410,14 @@ async fn launch_game(
                 return Ok(());
             }
 
-            println!("Game not detected yet, checking again in 5 seconds... (check {}/{})", check_attempts, max_checks);
+            println!("Game not detected yet, checking again in 2 seconds... (check {}/{})", check_attempts, max_checks);
         }
 
         println!("Game launch attempt {} failed, retrying...", current_attempt);
         
         if current_attempt < max_launch_attempts {
             let _ = force_close_game(selected_game.clone()).await;
-            thread::sleep(Duration::from_secs(2));
+            thread::sleep(Duration::from_secs(1));
         }
     }
 
