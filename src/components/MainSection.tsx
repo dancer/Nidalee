@@ -240,22 +240,23 @@ export const MainSection: React.FC = () => {
             <FaGamepad size={14} />
             <span>Game</span>
           </label>
-          <div className="relative">
-            <select
-              className="w-full bg-bl-gray border border-bl-light-gray rounded-md pl-3 pr-8 py-2.5 text-base
-                      focus:border-bl-red focus:ring-0 transition-colors appearance-none cursor-pointer"
-              value={selectedGame}
-              onChange={(e: FormSelectEvent) => setSelectedGame(e.target.value)}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedGame('valorant')}
+              className={`flex-1 bg-bl-gray border ${selectedGame === 'valorant' ? 'border-bl-red' : 'border-bl-light-gray'
+                } rounded-md p-3 hover:border-bl-red transition-colors flex items-center justify-center gap-2`}
             >
-              <option value="" className="bg-bl-gray text-white">Choose game...</option>
-              <option value="league" className="bg-bl-gray text-white">League of Legends</option>
-              <option value="valorant" className="bg-bl-gray text-white">VALORANT</option>
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-              <svg className="h-4 w-4 text-bl-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+              <img src="icons/valorant.png" alt="VALORANT" className="w-4 h-4" />
+              <span>Valorant</span>
+            </button>
+            <button
+              onClick={() => setSelectedGame('league')}
+              className={`flex-1 bg-bl-gray border ${selectedGame === 'league' ? 'border-bl-red' : 'border-bl-light-gray'
+                } rounded-md p-3 hover:border-bl-red transition-colors flex items-center justify-center gap-2`}
+            >
+              <img src="icons/league.png" alt="League of Legends" className="w-4 h-4" />
+              <span>League of Legends</span>
+            </button>
           </div>
         </div>
 

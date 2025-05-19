@@ -1,3 +1,63 @@
+# Nidalee v0.1.3 - Smart Launch Update 💘
+
+A significant update focusing on improved game launching reliability!
+
+## ✨ What's New
+
+### ❤️ Smarter Game Launch System
+
+- Intelligent retry mechanism for failed launches
+- Automatic detection of game updates
+- Faster launch checks (every 2 seconds)
+- Up to 5 automatic retry attempts
+- Better handling of post-login game launching
+
+### ❤️ Enhanced Update Detection
+
+- Improved update window detection
+- Proper handling of game updates
+- Automatic waiting for updates to complete
+- Clear feedback during update process
+
+### ❤️ Login Improvements
+
+- Added delay after login for better reliability
+- Optimized timing between login and game launch
+- More robust client state detection
+- Clearer progress messages
+
+### ❤️ Performance Optimizations
+
+- Reduced waiting times between checks
+- More efficient launch verification
+- Faster retry cycles
+- Better resource management
+
+## ✨ Quality of Life
+
+- Better feedback during launch attempts
+- Clear progress indicators
+- Improved error messages
+- More informative status updates
+
+## 💥 Installation
+
+1. Download and run Nidalee.msi
+2. Launch from desktop or start menu
+3. Add your accounts and start playing!
+
+## 💖 Support
+
+If you like this project, consider supporting it on [Ko-fi](https://ko-fi.com/nida)
+
+## 💯 Issues
+
+Found a bug? Please report it in the [Issues](https://github.com/dancer/nidalee/issues) section.
+
+---
+
+**Note**: If upgrading from v0.1.2, your accounts and settings will be automatically migrated.
+
 # Nidalee v0.1.2 - Smart Switch Update 💘
 
 A major update focusing on automatic account switching and improved user experience!
@@ -47,7 +107,7 @@ A major update focusing on automatic account switching and improved user experie
 
 ## 💖 Support
 
-If you like this project, consider supporting it on [Ko-fi](https://ko-fi.com/uoucat)
+If you like this project, consider supporting it on [Ko-fi](https://ko-fi.com/nida)
 
 ## 💯 Issues
 
@@ -55,7 +115,7 @@ Found a bug? Please report it in the [Issues](https://github.com/dancer/nidalee/
 
 ---
 
-**Note**: If upgrading from v0.1.1, your accounts and settings will be automatically migrated.
+**Note**: If upgrading from v0.1.3, your accounts and settings will be automatically migrated.
 
 # Nidalee v0.1.1 - Performance Update 💘
 
@@ -106,7 +166,7 @@ A significant update focusing on reliability and performance improvements!
 
 ## 💖 Support
 
-If you like this project, consider supporting it on [Ko-fi](https://ko-fi.com/uoucat)
+If you like this project, consider supporting it on [Ko-fi](https://ko-fi.com/nida)
 
 ## 💯 Issues
 

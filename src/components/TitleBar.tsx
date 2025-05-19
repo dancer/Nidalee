@@ -13,14 +13,14 @@ export const TitleBar: React.FC = () => {
   };
 
   return (
-    <div 
-      data-tauri-drag-region 
+    <div
+      data-tauri-drag-region
       className="h-8 bg-bl-dark border-b border-bl-light-gray flex justify-between items-center select-none"
     >
       <div data-tauri-drag-region className="flex-1 px-4">
-        <span className="text-gray-500 text-sm">v0.1.2</span>
+        <span className="text-gray-500 text-sm">v0.1.3</span>
       </div>
-      
+
       {/* Window controls */}
       <div className="flex h-full">
         <button

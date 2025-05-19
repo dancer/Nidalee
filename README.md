@@ -27,6 +27,8 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 - Auto-close running games
 - Category organization with easy editing
 - Quick launch for both games
+- Intelligent retry system for failed launches
+- Automatic update detection and handling
 
 💕 **System Integration**
 
@@ -35,6 +37,8 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 - Auto-minimize on game launch
 - Custom login delay settings
 - Intelligent client detection
+- Smart launch timing optimization
+- Automatic retry on failed launches
 
 💕 **Security**
 
@@ -51,6 +55,8 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 - Custom titlebar
 - Enhanced dropdown menus
 - Improved category management
+- Clear launch status indicators
+- Detailed progress feedback
 
 ## 💌 Planned Features
 
@@ -89,7 +95,7 @@ Nidalee is a sleek account manager for League of Legends and Valorant, built wit
 
 If you like this project, please consider supporting it by giving it a star ⭐ or buying me a coffee!
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/uoucat)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/nida)
 
 ## 💘 License
 
